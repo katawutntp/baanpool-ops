@@ -1,0 +1,127 @@
+import 'dart:typed_data';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Service layer for all Supabase operations
+class SupabaseService {
+  final SupabaseClient _client;
+
+  SupabaseService(this._client);
+
+  // ─── Auth ──────────────────────────────────────────────
+
+  Future<AuthResponse> signIn(String email, String password) {
+    return _client.auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<void> signOut() => _client.auth.signOut();
+
+  User? get currentUser => _client.auth.currentUser;
+
+  // ─── Properties ────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getProperties() async {
+    return await _client
+        .from('properties')
+        .select()
+        .order('name', ascending: true);
+  }
+
+  Future<Map<String, dynamic>> getProperty(String id) async {
+    return await _client.from('properties').select().eq('id', id).single();
+  }
+
+  Future<void> createProperty(Map<String, dynamic> data) async {
+    await _client.from('properties').insert(data);
+  }
+
+  // ─── Assets ────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getAssets({String? propertyId}) async {
+    var query = _client.from('assets').select();
+    if (propertyId != null) query = query.eq('property_id', propertyId);
+    return await query.order('name', ascending: true);
+  }
+
+  Future<Map<String, dynamic>> getAsset(String id) async {
+    return await _client.from('assets').select().eq('id', id).single();
+  }
+
+  // ─── Work Orders ──────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getWorkOrders({
+    String? status,
+    String? propertyId,
+    String? assignedTo,
+  }) async {
+    var query = _client.from('work_orders').select();
+    if (status != null) query = query.eq('status', status);
+    if (propertyId != null) query = query.eq('property_id', propertyId);
+    if (assignedTo != null) query = query.eq('assigned_to', assignedTo);
+    return await query.order('created_at', ascending: false);
+  }
+
+  Future<void> createWorkOrder(Map<String, dynamic> data) async {
+    await _client.from('work_orders').insert(data);
+  }
+
+  Future<void> updateWorkOrderStatus(String id, String status) async {
+    await _client.from('work_orders').update({'status': status}).eq('id', id);
+  }
+
+  // ─── Expenses ─────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getExpenses({
+    String? workOrderId,
+    String? propertyId,
+  }) async {
+    var query = _client.from('expenses').select();
+    if (workOrderId != null) query = query.eq('work_order_id', workOrderId);
+    if (propertyId != null) query = query.eq('property_id', propertyId);
+    return await query.order('expense_date', ascending: false);
+  }
+
+  Future<void> createExpense(Map<String, dynamic> data) async {
+    await _client.from('expenses').insert(data);
+  }
+
+  // ─── PM Schedules ─────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getPmSchedules({bool? dueSoon}) async {
+    var query = _client.from('pm_schedules').select().eq('is_active', true);
+    if (dueSoon == true) {
+      final weekFromNow = DateTime.now().add(const Duration(days: 7));
+      query = query.lte('next_due_date', weekFromNow.toIso8601String());
+    }
+    return await query.order('next_due_date', ascending: true);
+  }
+
+  // ─── Storage ──────────────────────────────────────────
+
+  Future<String> uploadFile(String bucket, String path, Uint8List bytes) async {
+    await _client.storage.from(bucket).uploadBinary(path, bytes);
+    return _client.storage.from(bucket).getPublicUrl(path);
+  }
+
+  // ─── Dashboard Stats ─────────────────────────────────
+
+  Future<int> getUrgentJobsCount() async {
+    final data = await _client
+        .from('work_orders')
+        .select('id')
+        .eq('priority', 'urgent')
+        .neq('status', 'completed');
+    return data.length;
+  }
+
+  Future<int> getTodayJobsCount() async {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+    final end = start.add(const Duration(days: 1));
+    final data = await _client
+        .from('work_orders')
+        .select('id')
+        .gte('created_at', start.toIso8601String())
+        .lt('created_at', end.toIso8601String());
+    return data.length;
+  }
+}

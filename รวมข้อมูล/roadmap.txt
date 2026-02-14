@@ -1,0 +1,151 @@
+Roadmap การพัฒนา Property Operations System (Full Version + Admin Panel)
+
+เอกสารฉบับนี้เป็น Blueprint ฉบับสมบูรณ์ ครอบคลุม:
+- Mobile App
+- Admin Panel (Web)
+- Dashboard
+- Reporting System
+- Preventive Maintenance
+- Expense Control
+ออกแบบให้ทำเองได้ ใช้เครื่องมือฟรี และสามารถใช้เป็น TOR จ้างพัฒนาได้
+
+Phase 0 — เตรียมเครื่องมือ (สัปดาห์ที่ 1)
+
+เครื่องมือที่ใช้ (ฟรีทั้งหมด):
+- Supabase (Database + Auth + Storage + Automation)
+- Flutter (Mobile App)
+- Next.js (Admin Panel Web)
+- GitHub (Version Control)
+- LINE Notify (Notification)
+
+เป้าหมาย:
+เตรียม Environment ให้พร้อมก่อนเริ่มพัฒนา
+
+Phase 1 — Database Foundation (สัปดาห์ที่ 2)
+
+สร้าง Table หลัก:
+
+1. users
+2. properties
+3. assets
+4. work_orders
+5. expenses
+6. pm_schedules
+
+เปิด Row Level Security (RLS):
+- Technician เห็นเฉพาะงานตัวเอง
+- Manager เห็นทุกงาน
+- Owner เห็นทุกข้อมูล
+
+Phase 2 — Mobile App (สัปดาห์ที่ 3–6)
+
+หน้าจอที่ต้องมี:
+
+AUTH
+- Login
+
+DASHBOARD (Mobile)
+- งานด่วน
+- งานวันนี้
+- PM ใกล้ครบ
+- Snapshot ค่าใช้จ่ายเดือนนี้
+
+PROPERTIES
+- รายชื่อบ้าน
+- รายละเอียดบ้าน
+
+ASSETS
+- รายการอุปกรณ์
+- ประวัติซ่อม
+- วันหมดประกัน
+
+WORK ORDERS
+- สร้างใบงาน
+- เปลี่ยนสถานะ
+- Assign ช่าง
+- แนบรูป
+- เพิ่มค่าใช้จ่าย
+
+EXPENSE
+- Upload ใบเสร็จ
+- ระบุเบิก Partner ได้หรือไม่
+
+PM
+- สร้าง Schedule
+- ดูงาน PM ที่กำลังจะถึง
+
+เป้าหมาย:
+หยุดงานหาย + เก็บประวัติครบ
+
+Phase 3 — Admin Panel (Web) (สัปดาห์ที่ 7–8)
+
+พัฒนาโดยใช้ Next.js
+
+หน้าที่ของ Admin Panel:
+
+1. Dashboard รวมองค์กร
+2. รายงานค่าใช้จ่าย
+3. วิเคราะห์ Asset เสียบ่อย
+4. ควบคุม User & Role
+5. Export รายงานเป็น Excel / CSV
+
+หน้าจอหลัก:
+
+ADMIN DASHBOARD
+- Total Open Jobs
+- Urgent Jobs
+- Monthly Expense
+- PM Upcoming
+- บ้านที่มีงานเยอะที่สุด
+
+WORK ORDER MANAGEMENT
+- Filter ตามสถานะ
+- Filter ตามบ้าน
+- Filter ตามช่าง
+
+EXPENSE REPORT
+- สรุปรายเดือน
+- แยกตามบ้าน
+- แยกตามประเภทงาน
+- ยอดที่ต้องวางบิล Partner
+
+ASSET ANALYTICS
+- อุปกรณ์ที่เสียบ่อย
+- อายุเฉลี่ยก่อนเสีย
+- ควรเปลี่ยนแทนซ่อมหรือไม่
+
+USER MANAGEMENT
+- เพิ่ม/ลบ user
+- กำหนด role
+
+Phase 4 — Reporting System (สัปดาห์ที่ 9)
+
+รายงานที่ต้องมี:
+
+1. Monthly Expense Report
+2. Property Cost Report
+3. Partner Billing Report
+4. Technician Performance Report
+5. Asset Failure Frequency Report
+6. Preventive Maintenance Compliance Report
+
+สามารถ Export:
+- CSV
+- Excel
+
+เป้าหมาย:
+Owner เห็นภาพรวมโดยไม่ต้องถามทีม
+
+Phase 5 — Automation + Notification (สัปดาห์ที่ 10)
+
+Automation:
+- ถ้า PM ถึงกำหนด → สร้าง Work Order อัตโนมัติ
+- ถ้างานเกิน Due Date → แจ้งเตือน
+
+Notification:
+- LINE Notify แจ้งงานใหม่
+- แจ้งงานด่วน
+- แจ้ง PM ใกล้ครบ
+
+
+

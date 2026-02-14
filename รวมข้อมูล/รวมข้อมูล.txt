@@ -1,0 +1,2 @@
+supabase
+-Database password :G6gxdT7+#5-Z-Mh
