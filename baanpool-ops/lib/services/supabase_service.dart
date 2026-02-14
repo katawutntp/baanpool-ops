@@ -34,6 +34,14 @@ class SupabaseService {
     await _client.from('properties').insert(data);
   }
 
+  Future<void> updateProperty(String id, Map<String, dynamic> data) async {
+    await _client.from('properties').update(data).eq('id', id);
+  }
+
+  Future<void> deleteProperty(String id) async {
+    await _client.from('properties').delete().eq('id', id);
+  }
+
   // ─── Assets ────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getAssets({String? propertyId}) async {
@@ -44,6 +52,18 @@ class SupabaseService {
 
   Future<Map<String, dynamic>> getAsset(String id) async {
     return await _client.from('assets').select().eq('id', id).single();
+  }
+
+  Future<void> createAsset(Map<String, dynamic> data) async {
+    await _client.from('assets').insert(data);
+  }
+
+  Future<void> updateAsset(String id, Map<String, dynamic> data) async {
+    await _client.from('assets').update(data).eq('id', id);
+  }
+
+  Future<void> deleteAsset(String id) async {
+    await _client.from('assets').delete().eq('id', id);
   }
 
   // ─── Work Orders ──────────────────────────────────────
@@ -86,13 +106,34 @@ class SupabaseService {
 
   // ─── PM Schedules ─────────────────────────────────────
 
-  Future<List<Map<String, dynamic>>> getPmSchedules({bool? dueSoon}) async {
-    var query = _client.from('pm_schedules').select().eq('is_active', true);
+  Future<List<Map<String, dynamic>>> getPmSchedules({
+    bool? dueSoon,
+    String? assetId,
+    String? assignedTo,
+  }) async {
+    var query = _client
+        .from('pm_schedules')
+        .select('*, users:assigned_to(full_name)')
+        .eq('is_active', true);
+    if (assetId != null) query = query.eq('asset_id', assetId);
+    if (assignedTo != null) query = query.eq('assigned_to', assignedTo);
     if (dueSoon == true) {
       final weekFromNow = DateTime.now().add(const Duration(days: 7));
       query = query.lte('next_due_date', weekFromNow.toIso8601String());
     }
     return await query.order('next_due_date', ascending: true);
+  }
+
+  Future<void> createPmSchedule(Map<String, dynamic> data) async {
+    await _client.from('pm_schedules').insert(data);
+  }
+
+  Future<void> updatePmSchedule(String id, Map<String, dynamic> data) async {
+    await _client.from('pm_schedules').update(data).eq('id', id);
+  }
+
+  Future<void> deletePmSchedule(String id) async {
+    await _client.from('pm_schedules').delete().eq('id', id);
   }
 
   // ─── Storage ──────────────────────────────────────────
@@ -133,6 +174,14 @@ class SupabaseService {
         .from('users')
         .select()
         .order('created_at', ascending: false);
+  }
+
+  Future<List<Map<String, dynamic>>> getTechnicians() async {
+    return await _client
+        .from('users')
+        .select()
+        .eq('role', 'technician')
+        .order('full_name', ascending: true);
   }
 
   /// Get a single user by ID

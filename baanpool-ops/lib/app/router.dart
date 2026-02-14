@@ -5,6 +5,7 @@ import '../screens/auth/auth_callback_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/properties/properties_list_screen.dart';
 import '../screens/properties/property_detail_screen.dart';
+import '../screens/properties/property_form_screen.dart';
 import '../screens/assets/assets_list_screen.dart';
 import '../screens/assets/asset_detail_screen.dart';
 import '../screens/work_orders/work_orders_list_screen.dart';
@@ -79,9 +80,20 @@ final appRouter = GoRouter(
           builder: (context, state) => const PropertiesListScreen(),
           routes: [
             GoRoute(
+              path: 'new',
+              builder: (context, state) => const PropertyFormScreen(),
+            ),
+            GoRoute(
               path: ':id',
               builder: (context, state) =>
                   PropertyDetailScreen(propertyId: state.pathParameters['id']!),
+              routes: [
+                GoRoute(
+                  path: 'edit',
+                  builder: (context, state) =>
+                      PropertyFormScreen(propertyId: state.pathParameters['id']!),
+                ),
+              ],
             ),
           ],
         ),

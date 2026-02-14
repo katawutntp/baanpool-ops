@@ -9,6 +9,8 @@ class PmSchedule {
   final DateTime nextDueDate;
   final DateTime? lastCompletedDate;
   final bool isActive;
+  final String? assignedTo;
+  final String? assignedToName; // joined from users table
   final DateTime createdAt;
 
   const PmSchedule({
@@ -21,10 +23,18 @@ class PmSchedule {
     required this.nextDueDate,
     this.lastCompletedDate,
     this.isActive = true,
+    this.assignedTo,
+    this.assignedToName,
     required this.createdAt,
   });
 
   factory PmSchedule.fromJson(Map<String, dynamic> json) {
+    // Handle joined user data
+    String? techName;
+    if (json['users'] is Map) {
+      techName = json['users']['full_name'] as String?;
+    }
+
     return PmSchedule(
       id: json['id'] as String,
       propertyId: json['property_id'] as String,
@@ -37,6 +47,8 @@ class PmSchedule {
           ? DateTime.parse(json['last_completed_date'] as String)
           : null,
       isActive: json['is_active'] as bool? ?? true,
+      assignedTo: json['assigned_to'] as String?,
+      assignedToName: techName,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -50,6 +62,7 @@ class PmSchedule {
     'next_due_date': nextDueDate.toIso8601String(),
     'last_completed_date': lastCompletedDate?.toIso8601String(),
     'is_active': isActive,
+    'assigned_to': assignedTo,
   };
 
   bool get isDueSoon =>

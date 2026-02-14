@@ -27,6 +27,7 @@ CREATE POLICY "Users can update own profile"
 
 -- Properties
 DROP POLICY IF EXISTS "Manager+ can manage properties" ON public.properties;
+DROP POLICY IF EXISTS "Admin/Manager+ can manage properties" ON public.properties;
 CREATE POLICY "Admin/Manager+ can manage properties"
   ON public.properties FOR ALL
   TO authenticated
@@ -34,12 +35,14 @@ CREATE POLICY "Admin/Manager+ can manage properties"
 
 -- Work Orders
 DROP POLICY IF EXISTS "Owner/Manager see all work orders" ON public.work_orders;
+DROP POLICY IF EXISTS "Admin/Owner/Manager see all work orders" ON public.work_orders;
 CREATE POLICY "Admin/Owner/Manager see all work orders"
   ON public.work_orders FOR SELECT
   TO authenticated
   USING (public.get_user_role() IN ('admin', 'owner', 'manager'));
 
 DROP POLICY IF EXISTS "Assigned tech can update own work orders" ON public.work_orders;
+DROP POLICY IF EXISTS "Admin or assigned tech can update work orders" ON public.work_orders;
 CREATE POLICY "Admin or assigned tech can update work orders"
   ON public.work_orders FOR UPDATE
   TO authenticated
@@ -47,6 +50,7 @@ CREATE POLICY "Admin or assigned tech can update work orders"
 
 -- Assets
 DROP POLICY IF EXISTS "Manager+ can manage assets" ON public.assets;
+DROP POLICY IF EXISTS "Admin/Manager+ can manage assets" ON public.assets;
 CREATE POLICY "Admin/Manager+ can manage assets"
   ON public.assets FOR ALL
   TO authenticated
@@ -54,6 +58,7 @@ CREATE POLICY "Admin/Manager+ can manage assets"
 
 -- Expenses
 DROP POLICY IF EXISTS "Owner/Manager see all expenses" ON public.expenses;
+DROP POLICY IF EXISTS "Admin/Owner/Manager see all expenses" ON public.expenses;
 CREATE POLICY "Admin/Owner/Manager see all expenses"
   ON public.expenses FOR SELECT
   TO authenticated
@@ -61,6 +66,7 @@ CREATE POLICY "Admin/Owner/Manager see all expenses"
 
 -- PM Schedules
 DROP POLICY IF EXISTS "Manager+ can manage PM" ON public.pm_schedules;
+DROP POLICY IF EXISTS "Admin/Manager+ can manage PM" ON public.pm_schedules;
 CREATE POLICY "Admin/Manager+ can manage PM"
   ON public.pm_schedules FOR ALL
   TO authenticated
@@ -68,6 +74,7 @@ CREATE POLICY "Admin/Manager+ can manage PM"
 
 -- Users - admin can see + manage all users
 DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can view own or admin can view all" ON public.users;
 CREATE POLICY "Users can view own or admin can view all"
   ON public.users FOR SELECT
   TO authenticated
