@@ -38,6 +38,7 @@ class AppUser {
 }
 
 enum UserRole {
+  admin,
   owner,
   manager,
   technician;
@@ -48,4 +49,20 @@ enum UserRole {
       orElse: () => UserRole.technician,
     );
   }
+
+  String get displayName {
+    switch (this) {
+      case UserRole.admin:
+        return 'ผู้ดูแลระบบ';
+      case UserRole.owner:
+        return 'เจ้าของ';
+      case UserRole.manager:
+        return 'ผู้จัดการ';
+      case UserRole.technician:
+        return 'ช่าง';
+    }
+  }
+
+  /// Returns true if this role has admin-level access
+  bool get isAdmin => this == admin || this == owner || this == manager;
 }

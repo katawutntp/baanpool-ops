@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
+import '../../services/auth_state_service.dart';
 
 /// Dashboard — งานด่วน, งานวันนี้, PM ใกล้ครบ, Snapshot ค่าใช้จ่าย
 class DashboardScreen extends StatelessWidget {
@@ -9,7 +10,19 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('แดชบอร์ด')),
+      appBar: AppBar(
+        title: const Text('แดชบอร์ด'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'ออกจากระบบ',
+            onPressed: () async {
+              await AuthStateService().signOut();
+              if (context.mounted) context.go('/login');
+            },
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           // TODO: Reload data from Supabase

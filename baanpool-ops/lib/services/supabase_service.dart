@@ -124,4 +124,57 @@ class SupabaseService {
         .lt('created_at', end.toIso8601String());
     return data.length;
   }
+
+  // ─── User Management ─────────────────────────────────
+
+  /// Get all users (for admin roles management)
+  Future<List<Map<String, dynamic>>> getUsers() async {
+    return await _client
+        .from('users')
+        .select()
+        .order('created_at', ascending: false);
+  }
+
+  /// Get a single user by ID
+  Future<Map<String, dynamic>?> getUser(String id) async {
+    return await _client.from('users').select().eq('id', id).maybeSingle();
+  }
+
+  /// Update a user's role
+  Future<void> updateUserRole(String userId, String role) async {
+    await _client.from('users').update({'role': role}).eq('id', userId);
+  }
+
+  /// Update user profile
+  Future<void> updateUser(String userId, Map<String, dynamic> data) async {
+    await _client.from('users').update(data).eq('id', userId);
+  }
+
+  /// Create admin user via email/password auth + users table
+  Future<void> createAdminUser({
+    required String email,
+    required String password,
+    required String fullName,
+    String? phone,
+  }) async {
+    // Sign up in Supabase Auth
+    final authRes = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {'full_name': fullName},
+    );
+
+    if (authRes.user == null) {
+      throw Exception('Failed to create auth user');
+    }
+
+    // Insert into users table with admin role
+    await _client.from('users').upsert({
+      'id': authRes.user!.id,
+      'email': email,
+      'full_name': fullName,
+      'role': 'admin',
+      'phone': phone,
+    });
+  }
 }

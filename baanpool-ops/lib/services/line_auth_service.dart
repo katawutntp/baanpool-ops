@@ -18,6 +18,13 @@ class LineAuthService {
   String get _redirectUrl {
     if (kIsWeb) {
       final uri = Uri.base;
+      // Don't include port for standard ports (443 for HTTPS, 80 for HTTP)
+      final isStandardPort =
+          (uri.scheme == 'https' && uri.port == 443) ||
+          (uri.scheme == 'http' && uri.port == 80);
+      if (isStandardPort || uri.port == 0) {
+        return '${uri.scheme}://${uri.host}/auth/callback';
+      }
       return '${uri.scheme}://${uri.host}:${uri.port}/auth/callback';
     }
     return 'com.baanpool.ops://login-callback';

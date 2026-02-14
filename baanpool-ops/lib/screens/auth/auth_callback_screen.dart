@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/line_auth_service.dart';
+import '../../services/auth_state_service.dart';
 
 /// Auth callback screen — handles redirect from LINE OAuth
 class AuthCallbackScreen extends StatefulWidget {
@@ -35,8 +36,14 @@ class _AuthCallbackScreenState extends State<AuthCallbackScreen> {
       final lineAuth = LineAuthService(Supabase.instance.client);
       await lineAuth.handleCallback(code);
 
-      // Success → go to dashboard
-      if (mounted) context.go('/');
+      // Load user profile to get role
+      await AuthStateService().loadUserProfile();
+
+      // Success → go to appropriate page based on role
+      if (mounted) {
+        final authState = AuthStateService();
+        context.go(authState.isTechnician ? '/work-orders' : '/');
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _error = 'เข้าสู่ระบบไม่สำเร็จ: $e');

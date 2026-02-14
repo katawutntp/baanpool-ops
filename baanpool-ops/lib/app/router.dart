@@ -13,7 +13,9 @@ import '../screens/work_orders/work_order_form_screen.dart';
 import '../screens/expenses/expenses_list_screen.dart';
 import '../screens/expenses/expense_form_screen.dart';
 import '../screens/pm/pm_schedule_screen.dart';
+import '../screens/admin/roles_management_screen.dart';
 import '../screens/shell_screen.dart';
+import '../services/auth_state_service.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -25,8 +27,32 @@ final appRouter = GoRouter(
 
     // Not logged in → go to login
     if (!isLoggedIn && !isAuthRoute) return '/login';
-    // Logged in but on login page → go to dashboard
-    if (isLoggedIn && isAuthRoute) return '/';
+    // Logged in but on login page → go to dashboard or work-orders
+    if (isLoggedIn && isAuthRoute) {
+      final authState = AuthStateService();
+      return authState.isTechnician ? '/work-orders' : '/';
+    }
+
+    // Role-based access guards
+    if (isLoggedIn) {
+      final authState = AuthStateService();
+      final path = state.uri.toString();
+
+      // Technicians cannot access dashboard, expenses, admin pages
+      if (authState.isTechnician) {
+        if (path == '/' ||
+            path.startsWith('/expenses') ||
+            path.startsWith('/admin')) {
+          return '/work-orders';
+        }
+      }
+
+      // Only admin can access admin pages
+      if (path.startsWith('/admin') && !authState.isAdmin) {
+        return '/work-orders';
+      }
+    }
+
     return null;
   },
   routes: [
@@ -41,7 +67,7 @@ final appRouter = GoRouter(
     ShellRoute(
       builder: (context, state, child) => ShellScreen(child: child),
       routes: [
-        // Dashboard
+        // Dashboard (admin only — technicians will be redirected)
         GoRoute(
           path: '/',
           builder: (context, state) => const DashboardScreen(),
@@ -91,7 +117,7 @@ final appRouter = GoRouter(
           ],
         ),
 
-        // Expenses
+        // Expenses (admin only — technicians will be redirected)
         GoRoute(
           path: '/expenses',
           builder: (context, state) => const ExpensesListScreen(),
@@ -107,6 +133,12 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/pm',
           builder: (context, state) => const PmScheduleScreen(),
+        ),
+
+        // Admin — Roles Management
+        GoRoute(
+          path: '/admin/roles',
+          builder: (context, state) => const RolesManagementScreen(),
         ),
       ],
     ),

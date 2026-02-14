@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/line_auth_service.dart';
+import '../../services/auth_state_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,9 +26,13 @@ class _LoginScreenState extends State<LoginScreen> {
     _lineAuth = LineAuthService(Supabase.instance.client);
 
     // Listen for auth state changes (e.g., after LINE callback)
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       if (data.event == AuthChangeEvent.signedIn && mounted) {
-        context.go('/');
+        await AuthStateService().loadUserProfile();
+        if (mounted) {
+          final authState = AuthStateService();
+          context.go(authState.isTechnician ? '/work-orders' : '/');
+        }
       }
     });
   }
@@ -62,15 +67,95 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _loading = true);
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-      if (mounted) context.go('/');
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      try {
+        // Try sign in first
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+      } on AuthException catch (authErr) {
+        // If user doesn't exist, auto sign-up
+        if (authErr.message.contains('Invalid login credentials')) {
+          final signUpRes = await Supabase.instance.client.auth.signUp(
+            email: email,
+            password: password,
+            data: {'full_name': email.split('@').first},
+          );
+
+          if (signUpRes.user == null) {
+            throw Exception('สร้างบัญชีไม่สำเร็จ');
+          }
+
+          // Check if this is the first user → make admin
+          // Try to count existing users (may fail due to RLS, that's ok)
+          String role = 'admin'; // First user = admin by default
+          try {
+            final existingUsers = await Supabase.instance.client
+                .from('users')
+                .select('id')
+                .limit(2);
+            if (existingUsers.length > 1) {
+              role = 'technician'; // Not the first user
+            }
+          } catch (_) {
+            // RLS may block, default to admin for first signup
+          }
+
+          // Insert into users table
+          try {
+            await Supabase.instance.client.from('users').upsert({
+              'id': signUpRes.user!.id,
+              'email': email,
+              'full_name': email.split('@').first,
+              'role': role,
+            });
+          } catch (_) {
+            // May fail due to RLS on first run before migration_002
+          }
+
+          // Sign in after sign up
+          await Supabase.instance.client.auth.signInWithPassword(
+            email: email,
+            password: password,
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'สร้างบัญชีใหม่สำเร็จ (Role: ${role == 'admin' ? 'ผู้ดูแลระบบ' : 'ช่าง'})',
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          rethrow;
+        }
+      }
+
+      // Load user profile to get role
+      await AuthStateService().loadUserProfile();
+      if (mounted) {
+        final authState = AuthStateService();
+        context.go(authState.isTechnician ? '/work-orders' : '/');
+      }
     } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เข้าสู่ระบบไม่สำเร็จ: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {

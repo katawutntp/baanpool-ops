@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../services/auth_state_service.dart';
 
 class WorkOrdersListScreen extends StatelessWidget {
   const WorkOrdersListScreen({super.key});
@@ -14,6 +15,14 @@ class WorkOrdersListScreen extends StatelessWidget {
             icon: const Icon(Icons.filter_list),
             onPressed: () {
               // TODO: Filter dialog (ตามสถานะ, บ้าน, ช่าง)
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'ออกจากระบบ',
+            onPressed: () async {
+              await AuthStateService().signOut();
+              if (context.mounted) context.go('/login');
             },
           ),
         ],
