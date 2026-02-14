@@ -4,7 +4,7 @@ class AppTheme {
   AppTheme._();
 
   // Brand colors
-  static const Color primaryColor = Color(0xFF1565C0); // Blue
+  static const Color primaryColor = Color(0xFFF36734); // BaanPool Orange
   static const Color secondaryColor = Color(0xFF26A69A); // Teal
   static const Color urgentColor = Color(0xFFE53935); // Red
   static const Color warningColor = Color(0xFFFFA726); // Orange
