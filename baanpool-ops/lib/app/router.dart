@@ -13,6 +13,7 @@ import '../screens/work_orders/work_order_detail_screen.dart';
 import '../screens/work_orders/work_order_form_screen.dart';
 import '../screens/expenses/expenses_list_screen.dart';
 import '../screens/expenses/expense_form_screen.dart';
+import '../screens/expenses/expense_report_screen.dart';
 import '../screens/pm/pm_schedule_screen.dart';
 import '../screens/admin/roles_management_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
@@ -141,6 +142,10 @@ final appRouter = GoRouter(
               builder: (context, state) => ExpenseFormScreen(
                 workOrderId: state.uri.queryParameters['workOrderId'],
               ),
+            ),
+            GoRoute(
+              path: 'report',
+              builder: (context, state) => const ExpenseReportScreen(),
             ),
           ],
         ),

@@ -91,6 +91,17 @@ class _ShellScreenState extends State<ShellScreen> {
       );
     }
 
+    // Notifications — visible to everyone
+    items.add(
+      _NavItem(
+        path: '/notifications',
+        icon: Icons.notifications_outlined,
+        selectedIcon: Icons.notifications,
+        label: 'แจ้งเตือน',
+        badgeCount: _notiService.unreadCount,
+      ),
+    );
+
     // Admin users get a roles tab
     if (isAdmin) {
       items.add(
@@ -115,32 +126,6 @@ class _ShellScreenState extends State<ShellScreen> {
     return 0;
   }
 
-  Widget _buildNotificationBell(BuildContext context) {
-    final unread = _notiService.unreadCount;
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: FloatingActionButton.small(
-        heroTag: 'notiBell',
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        elevation: 2,
-        onPressed: () => context.push('/notifications'),
-        child: Badge(
-          isLabelVisible: unread > 0,
-          label: Text(
-            unread > 99 ? '99+' : '$unread',
-            style: const TextStyle(fontSize: 10),
-          ),
-          child: Icon(
-            unread > 0
-                ? Icons.notifications_active
-                : Icons.notifications_outlined,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final navItems = _getNavItems();
@@ -148,9 +133,6 @@ class _ShellScreenState extends State<ShellScreen> {
 
     return Scaffold(
       body: widget.child,
-      appBar: null,
-      floatingActionButton: _buildNotificationBell(context),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIdx.clamp(0, navItems.length - 1),
         onDestinationSelected: (index) {
@@ -159,8 +141,24 @@ class _ShellScreenState extends State<ShellScreen> {
         destinations: navItems
             .map(
               (item) => NavigationDestination(
-                icon: Icon(item.icon),
-                selectedIcon: Icon(item.selectedIcon),
+                icon: item.badgeCount > 0
+                    ? Badge(
+                        label: Text(
+                          item.badgeCount > 99 ? '99+' : '${item.badgeCount}',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                        child: Icon(item.icon),
+                      )
+                    : Icon(item.icon),
+                selectedIcon: item.badgeCount > 0
+                    ? Badge(
+                        label: Text(
+                          item.badgeCount > 99 ? '99+' : '${item.badgeCount}',
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                        child: Icon(item.selectedIcon),
+                      )
+                    : Icon(item.selectedIcon),
                 label: item.label,
               ),
             )
@@ -175,11 +173,13 @@ class _NavItem {
   final IconData icon;
   final IconData selectedIcon;
   final String label;
+  final int badgeCount;
 
   const _NavItem({
     required this.path,
     required this.icon,
     required this.selectedIcon,
     required this.label,
+    this.badgeCount = 0,
   });
 }

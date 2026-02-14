@@ -20,7 +20,6 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _category = 'material';
-  bool _billableToPartner = false;
   bool _saving = false;
   bool _loading = true;
 
@@ -124,7 +123,6 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
             ? null
             : _descriptionController.text.trim(),
         'category': _category,
-        'billable_to_partner': _billableToPartner,
         'expense_date': DateTime.now().toIso8601String().split('T').first,
         if (receiptUrl != null) 'receipt_url': receiptUrl,
       });
@@ -283,14 +281,6 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                             ? 'แนบรูปใบเสร็จ'
                             : 'เปลี่ยนรูปใบเสร็จ',
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Billable to partner
-                    SwitchListTile(
-                      title: const Text('เบิกจาก Partner ได้'),
-                      value: _billableToPartner,
-                      onChanged: (v) => setState(() => _billableToPartner = v),
                     ),
                     const SizedBox(height: 24),
 

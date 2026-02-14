@@ -77,7 +77,16 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ค่าใช้จ่าย')),
+      appBar: AppBar(
+        title: const Text('ค่าใช้จ่าย'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'รายงานรายเดือน',
+            onPressed: () => context.push('/expenses/report'),
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _expenses.isEmpty

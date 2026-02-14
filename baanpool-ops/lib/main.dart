@@ -16,11 +16,22 @@ Future<void> main() async {
   // Load environment variables
   await dotenv.load(fileName: '.env');
 
-  // Initialize Supabase
+  // Initialize Supabase with session persistence
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    authOptions: const FlutterAuthClientOptions(autoRefreshToken: true),
   );
+
+  // Try to recover persisted session (especially after app restart)
+  try {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      await Supabase.instance.client.auth.refreshSession();
+    }
+  } catch (_) {
+    // If refresh fails, user will be redirected to login
+  }
 
   // Initialize auth state (loads current user profile + role)
   await AuthStateService().init();
