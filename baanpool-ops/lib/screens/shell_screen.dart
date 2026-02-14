@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../models/user.dart';
 import '../services/auth_state_service.dart';
 import '../services/notification_service.dart';
 
@@ -102,8 +103,8 @@ class _ShellScreenState extends State<ShellScreen> {
       ),
     );
 
-    // Admin users get a roles tab
-    if (isAdmin) {
+    // Admin-only: roles management (only role=admin, not owner/manager)
+    if (_authState.currentRole == UserRole.admin) {
       items.add(
         _NavItem(
           path: '/admin/roles',

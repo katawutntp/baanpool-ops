@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/user.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/auth_callback_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
@@ -50,8 +51,9 @@ final appRouter = GoRouter(
         }
       }
 
-      // Only admin can access admin pages
-      if (path.startsWith('/admin') && !authState.isAdmin) {
+      // Only admin role can access admin pages (not owner/manager)
+      if (path.startsWith('/admin') &&
+          authState.currentRole != UserRole.admin) {
         return '/work-orders';
       }
     }
