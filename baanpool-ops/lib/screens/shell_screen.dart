@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/auth_state_service.dart';
+import '../services/notification_service.dart';
 
 /// Shell screen with bottom navigation bar — role-aware
 class ShellScreen extends StatefulWidget {
@@ -14,16 +15,19 @@ class ShellScreen extends StatefulWidget {
 
 class _ShellScreenState extends State<ShellScreen> {
   final _authState = AuthStateService();
+  final _notiService = NotificationService();
 
   @override
   void initState() {
     super.initState();
     _authState.addListener(_onAuthChanged);
+    _notiService.addListener(_onAuthChanged);
   }
 
   @override
   void dispose() {
     _authState.removeListener(_onAuthChanged);
+    _notiService.removeListener(_onAuthChanged);
     super.dispose();
   }
 
@@ -111,6 +115,32 @@ class _ShellScreenState extends State<ShellScreen> {
     return 0;
   }
 
+  Widget _buildNotificationBell(BuildContext context) {
+    final unread = _notiService.unreadCount;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: FloatingActionButton.small(
+        heroTag: 'notiBell',
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        elevation: 2,
+        onPressed: () => context.push('/notifications'),
+        child: Badge(
+          isLabelVisible: unread > 0,
+          label: Text(
+            unread > 99 ? '99+' : '$unread',
+            style: const TextStyle(fontSize: 10),
+          ),
+          child: Icon(
+            unread > 0
+                ? Icons.notifications_active
+                : Icons.notifications_outlined,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final navItems = _getNavItems();
@@ -118,6 +148,9 @@ class _ShellScreenState extends State<ShellScreen> {
 
     return Scaffold(
       body: widget.child,
+      appBar: null,
+      floatingActionButton: _buildNotificationBell(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIdx.clamp(0, navItems.length - 1),
         onDestinationSelected: (index) {

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'services/auth_state_service.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,9 @@ Future<void> main() async {
 
   // Initialize auth state (loads current user profile + role)
   await AuthStateService().init();
+
+  // Initialize in-app notifications (load + realtime)
+  await NotificationService().init();
 
   runApp(const BaanPoolApp());
 }

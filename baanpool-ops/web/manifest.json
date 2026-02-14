@@ -1,11 +1,11 @@
 {
-    "name": "baanpool_ops",
-    "short_name": "baanpool_ops",
+    "name": "BaanPool Ops",
+    "short_name": "BaanPool Ops",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "ระบบบริหารจัดการบ้านพูล BaanPool",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
