@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/work_order.dart';
 import '../../services/supabase_service.dart';
+import '../../services/line_notify_service.dart';
 
 class WorkOrderDetailScreen extends StatefulWidget {
   final String workOrderId;
@@ -49,9 +50,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -59,19 +60,35 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
 
   Future<void> _updateStatus(String newStatus) async {
     try {
+      final oldStatus = _workOrder?.status.name ?? 'open';
       await _service.updateWorkOrderStatus(widget.workOrderId, newStatus);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('อัปเดตสถานะสำเร็จ'),
-          backgroundColor: Colors.green,
-        ),
-      );
+
+      // Send LINE notification to caretaker & managers
+      if (_workOrder != null) {
+        LineNotifyService().notifyWorkOrderStatusChanged(
+          workOrderTitle: _workOrder!.title,
+          propertyId: _workOrder!.propertyId,
+          propertyName: _propertyName ?? '',
+          oldStatus: oldStatus == 'inProgress' ? 'in_progress' : oldStatus,
+          newStatus: newStatus,
+          technicianName: _technicianName,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('อัปเดตสถานะสำเร็จ'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
       _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('อัปเดตล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('อัปเดตล้มเหลว: $e')));
       }
     }
   }
@@ -87,10 +104,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
             SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(ctx);
-                final value =
-                    status == WorkOrderStatus.inProgress
-                        ? 'in_progress'
-                        : status.name;
+                final value = status == WorkOrderStatus.inProgress
+                    ? 'in_progress'
+                    : status.name;
                 _updateStatus(value);
               },
               child: Row(
@@ -138,9 +154,7 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
     final wo = _workOrder!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('รายละเอียดใบงาน'),
-      ),
+      appBar: AppBar(title: const Text('รายละเอียดใบงาน')),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -185,7 +199,11 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                       _infoRow(Icons.engineering, 'ช่าง', _technicianName!),
 
                     // Priority
-                    _infoRow(Icons.flag, 'ความเร่งด่วน', wo.priority.displayName),
+                    _infoRow(
+                      Icons.flag,
+                      'ความเร่งด่วน',
+                      wo.priority.displayName,
+                    ),
 
                     // Created date
                     _infoRow(
@@ -225,10 +243,7 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'รายละเอียด',
-                        style: theme.textTheme.titleMedium,
-                      ),
+                      Text('รายละเอียด', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 8),
                       Text(wo.description!),
                     ],
@@ -267,7 +282,12 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _infoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -320,7 +340,14 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 

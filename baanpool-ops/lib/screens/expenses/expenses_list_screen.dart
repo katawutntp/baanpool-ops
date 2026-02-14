@@ -31,9 +31,9 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
       _total = _expenses.fold(0, (sum, e) => sum + e.amount);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -81,86 +81,86 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _expenses.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.receipt_long,
-                        size: 64,
-                        color: theme.colorScheme.outline,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('ยังไม่มีข้อมูลค่าใช้จ่าย'),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    size: 64,
+                    color: theme.colorScheme.outline,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      // Total summary
-                      Card(
-                        color: theme.colorScheme.primaryContainer,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
+                  const SizedBox(height: 16),
+                  const Text('ยังไม่มีข้อมูลค่าใช้จ่าย'),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Total summary
+                  Card(
+                    color: theme.colorScheme.primaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.account_balance_wallet,
-                                color: theme.colorScheme.onPrimaryContainer,
+                              Text(
+                                'ค่าใช้จ่ายทั้งหมด',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
                               ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'ค่าใช้จ่ายทั้งหมด',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: theme.colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                  Text(
-                                    _formatAmount(_total),
-                                    style: theme.textTheme.headlineSmall?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                _formatAmount(_total),
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                      // Expense items
-                      ..._expenses.map(
-                        (e) => Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              child: Icon(_categoryIcon(e.category)),
-                            ),
-                            title: Text(
-                              e.description ?? _categoryLabel(e.category),
-                            ),
-                            subtitle: Text(
-                              '${_categoryLabel(e.category)} • ${e.expenseDate.day}/${e.expenseDate.month}/${e.expenseDate.year}',
-                            ),
-                            trailing: Text(
-                              _formatAmount(e.amount),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Expense items
+                  ..._expenses.map(
+                    (e) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Icon(_categoryIcon(e.category)),
+                        ),
+                        title: Text(
+                          e.description ?? _categoryLabel(e.category),
+                        ),
+                        subtitle: Text(
+                          '${_categoryLabel(e.category)} • ${e.expenseDate.day}/${e.expenseDate.month}/${e.expenseDate.year}',
+                        ),
+                        trailing: Text(
+                          _formatAmount(e.amount),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await context.push('/expenses/new');

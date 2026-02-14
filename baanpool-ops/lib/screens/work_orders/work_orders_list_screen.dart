@@ -37,9 +37,9 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
       };
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -60,8 +60,9 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
             child: Text(
               'ทั้งหมด',
               style: TextStyle(
-                fontWeight:
-                    _filterStatus == null ? FontWeight.bold : FontWeight.normal,
+                fontWeight: _filterStatus == null
+                    ? FontWeight.bold
+                    : FontWeight.normal,
               ),
             ),
           ),
@@ -70,10 +71,9 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
               onPressed: () {
                 Navigator.pop(ctx);
                 setState(() {
-                  _filterStatus =
-                      status == WorkOrderStatus.inProgress
-                          ? 'in_progress'
-                          : status.name;
+                  _filterStatus = status == WorkOrderStatus.inProgress
+                      ? 'in_progress'
+                      : status.name;
                 });
                 _load();
               },
@@ -122,40 +122,40 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _workOrders.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.assignment_outlined,
-                        size: 64,
-                        color: theme.colorScheme.outline,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('ยังไม่มีใบงาน'),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: () async {
-                          await context.push('/work-orders/new');
-                          _load();
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('สร้างใบงาน'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 64,
+                    color: theme.colorScheme.outline,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _workOrders.length,
-                    itemBuilder: (context, index) {
-                      final wo = _workOrders[index];
-                      return _buildWorkOrderCard(wo, theme);
+                  const SizedBox(height: 16),
+                  const Text('ยังไม่มีใบงาน'),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      await context.push('/work-orders/new');
+                      _load();
                     },
+                    icon: const Icon(Icons.add),
+                    label: const Text('สร้างใบงาน'),
                   ),
-                ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _workOrders.length,
+                itemBuilder: (context, index) {
+                  final wo = _workOrders[index];
+                  return _buildWorkOrderCard(wo, theme);
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           await context.push('/work-orders/new');
@@ -200,7 +200,11 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
               if (propertyName.isNotEmpty)
                 Row(
                   children: [
-                    Icon(Icons.home, size: 16, color: theme.colorScheme.outline),
+                    Icon(
+                      Icons.home,
+                      size: 16,
+                      color: theme.colorScheme.outline,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       propertyName,

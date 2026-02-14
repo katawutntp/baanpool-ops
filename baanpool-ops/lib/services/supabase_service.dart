@@ -128,10 +128,7 @@ class SupabaseService {
       return await query.order('next_due_date', ascending: true);
     } catch (_) {
       // Fallback: query without join (assigned_to column may not exist yet)
-      var query = _client
-          .from('pm_schedules')
-          .select()
-          .eq('is_active', true);
+      var query = _client.from('pm_schedules').select().eq('is_active', true);
       if (assetId != null) query = query.eq('asset_id', assetId);
       if (dueSoon == true) {
         final weekFromNow = DateTime.now().add(const Duration(days: 7));

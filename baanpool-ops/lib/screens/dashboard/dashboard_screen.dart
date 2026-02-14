@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../app/theme.dart';
 import '../../services/auth_state_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/line_notify_service.dart';
 
 /// Dashboard — งานด่วน, งานวันนี้, PM ใกล้ครบ, ใบงานล่าสุด
 class DashboardScreen extends StatefulWidget {
@@ -58,11 +59,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (_) {
         _pmDueSoonCount = 0;
       }
+
+      // Send LINE notifications for PM schedules due soon
+      if (_pmDueSoonCount > 0) {
+        LineNotifyService().checkAndNotifyPmDueSchedules();
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
+import '../../services/line_notify_service.dart';
 
 class WorkOrderFormScreen extends StatefulWidget {
   const WorkOrderFormScreen({super.key});
@@ -80,10 +81,11 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
           (p) => p['id'] == _selectedPropertyId,
           orElse: () => {'name': ''},
         );
-        await _service.notifyWorkOrderAssigned(
-          assignedToUserId: _selectedTechnicianId!,
+        await LineNotifyService().notifyTechnicianAssigned(
+          technicianUserId: _selectedTechnicianId!,
           workOrderTitle: _titleController.text.trim(),
           propertyName: property['name'] ?? '',
+          priority: _priority,
         );
       }
 
