@@ -1,10 +1,14 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 
 class ExpenseFormScreen extends StatefulWidget {
-  const ExpenseFormScreen({super.key});
+  final String? workOrderId;
+
+  const ExpenseFormScreen({super.key, this.workOrderId});
 
   @override
   State<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
@@ -23,6 +27,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   String? _selectedWorkOrderId;
   List<Map<String, dynamic>> _workOrders = [];
 
+  // Receipt image
+  final ImagePicker _picker = ImagePicker();
+  XFile? _receiptImage;
+  Uint8List? _receiptBytes;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +42,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     setState(() => _loading = true);
     try {
       _workOrders = await _service.getWorkOrders();
+      // Pre-select work order if passed via query param
+      if (widget.workOrderId != null) {
+        _selectedWorkOrderId = widget.workOrderId;
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -50,6 +63,27 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
     super.dispose();
   }
 
+  Future<void> _pickReceipt() async {
+    try {
+      final image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+      if (image == null) return;
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _receiptImage = image;
+        _receiptBytes = bytes;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedWorkOrderId == null) {
@@ -61,6 +95,19 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
 
     setState(() => _saving = true);
     try {
+      // Upload receipt image if selected
+      String? receiptUrl;
+      if (_receiptBytes != null && _receiptImage != null) {
+        final ext = _receiptImage!.name.split('.').last;
+        final path =
+            'receipts/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        try {
+          receiptUrl = await _service.uploadFile('photos', path, _receiptBytes!);
+        } catch (e) {
+          debugPrint('Upload receipt failed: $e');
+        }
+      }
+
       // Get property_id from the selected work order
       final selectedWO = _workOrders.firstWhere(
         (wo) => wo['id'] == _selectedWorkOrderId,
@@ -76,6 +123,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         'category': _category,
         'billable_to_partner': _billableToPartner,
         'expense_date': DateTime.now().toIso8601String().split('T').first,
+        if (receiptUrl != null) 'receipt_url': receiptUrl,
       });
 
       if (mounted) {
@@ -177,6 +225,53 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                         prefixIcon: Icon(Icons.notes),
                       ),
                       maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Receipt image
+                    if (_receiptBytes != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Stack(
+                          children: [
+                            Image.memory(
+                              _receiptBytes!,
+                              width: double.infinity,
+                              height: 180,
+                              fit: BoxFit.cover,
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => setState(() {
+                                  _receiptImage = null;
+                                  _receiptBytes = null;
+                                }),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: const Icon(Icons.close,
+                                      size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    OutlinedButton.icon(
+                      onPressed: _pickReceipt,
+                      icon: const Icon(Icons.receipt),
+                      label: Text(
+                        _receiptBytes == null
+                            ? 'แนบรูปใบเสร็จ'
+                            : 'เปลี่ยนรูปใบเสร็จ',
+                      ),
                     ),
                     const SizedBox(height: 16),
 

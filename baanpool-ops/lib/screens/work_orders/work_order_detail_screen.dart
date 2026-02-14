@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/work_order.dart';
 import '../../services/supabase_service.dart';
@@ -234,6 +235,55 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
               ),
             ),
 
+            // Photos
+            if (wo.photoUrls.isNotEmpty) ...[  
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('รูปภาพ (${wo.photoUrls.length})',
+                          style: theme.textTheme.titleMedium),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 150,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: wo.photoUrls.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            return GestureDetector(
+                              onTap: () => _showFullImage(
+                                  context, wo.photoUrls[index]),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  wo.photoUrls[index],
+                                  width: 150,
+                                  height: 150,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const SizedBox(
+                                    width: 150,
+                                    height: 150,
+                                    child: Center(
+                                        child: Icon(Icons.broken_image)),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
             // Description
             if (wo.description != null && wo.description!.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -253,6 +303,21 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
             ],
 
             const SizedBox(height: 24),
+
+            // Expense button for completed work orders
+            if (wo.status == WorkOrderStatus.completed) ...[  
+              FilledButton.icon(
+                onPressed: () => context.push(
+                  '/expenses/new?workOrderId=${wo.id}',
+                ),
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('เพิ่มค่าใช้จ่าย'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Action buttons
             if (wo.status != WorkOrderStatus.completed &&
@@ -276,6 +341,30 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                   label: const Text('ทำเสร็จแล้ว'),
                 ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullImage(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              child: Image.network(url, fit: BoxFit.contain),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: const Icon(Icons.close, color: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: Colors.black54),
+              ),
+            ),
           ],
         ),
       ),

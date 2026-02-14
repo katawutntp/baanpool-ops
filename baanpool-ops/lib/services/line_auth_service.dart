@@ -42,6 +42,8 @@ class LineAuthService {
       'state': state,
       'scope': 'profile openid email',
       'nonce': nonce,
+      // Force user to add the BaanPool Ops LINE bot as friend
+      'bot_prompt': 'aggressive',
     });
 
     if (kIsWeb) {

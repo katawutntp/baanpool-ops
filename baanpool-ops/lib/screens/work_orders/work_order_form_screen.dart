@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 import '../../services/line_notify_service.dart';
@@ -24,6 +26,11 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
 
   List<Map<String, dynamic>> _properties = [];
   List<Map<String, dynamic>> _technicians = [];
+
+  // Image picker
+  final ImagePicker _picker = ImagePicker();
+  final List<XFile> _pickedImages = [];
+  final List<Uint8List> _imageBytes = [];
 
   @override
   void initState() {
@@ -62,6 +69,25 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
     setState(() => _saving = true);
 
     try {
+      // Upload images first
+      final photoUrls = <String>[];
+      for (int i = 0; i < _imageBytes.length; i++) {
+        final bytes = _imageBytes[i];
+        final ext = _pickedImages[i].name.split('.').last;
+        final path =
+            'work-orders/${DateTime.now().millisecondsSinceEpoch}_$i.$ext';
+        try {
+          final url = await _service.uploadFile(
+            'photos',
+            path,
+            bytes,
+          );
+          photoUrls.add(url);
+        } catch (e) {
+          debugPrint('Upload image $i failed: $e');
+        }
+      }
+
       final data = {
         'title': _titleController.text.trim(),
         'property_id': _selectedPropertyId,
@@ -71,6 +97,7 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
             : _descriptionController.text.trim(),
         'assigned_to': _selectedTechnicianId,
         'status': 'open',
+        if (photoUrls.isNotEmpty) 'photo_urls': photoUrls,
       };
 
       await _service.createWorkOrder(data);
@@ -103,6 +130,26 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
       }
     }
     if (mounted) setState(() => _saving = false);
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final images = await _picker.pickMultiImage(imageQuality: 70);
+      if (images.isEmpty) return;
+      for (final img in images) {
+        final bytes = await img.readAsBytes();
+        setState(() {
+          _pickedImages.add(img);
+          _imageBytes.add(bytes);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -207,12 +254,65 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                     const SizedBox(height: 16),
 
                     // Photo attachment
+                    if (_imageBytes.isNotEmpty) ...[
+                      SizedBox(
+                        height: 100,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _imageBytes.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            return Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.memory(
+                                    _imageBytes[index],
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 2,
+                                  right: 2,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _pickedImages.removeAt(index);
+                                        _imageBytes.removeAt(index);
+                                      });
+                                    },
+                                    child: Container(
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      padding: const EdgeInsets.all(4),
+                                      child: const Icon(
+                                        Icons.close,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                     OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Image picker
-                      },
+                      onPressed: _pickImages,
                       icon: const Icon(Icons.camera_alt),
-                      label: const Text('แนบรูปภาพ'),
+                      label: Text(
+                        _imageBytes.isEmpty
+                            ? 'แนบรูปภาพ'
+                            : 'เพิ่มรูปภาพ (${_imageBytes.length})',
+                      ),
                     ),
                     const SizedBox(height: 24),
 

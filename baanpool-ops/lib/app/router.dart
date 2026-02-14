@@ -137,7 +137,9 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: 'new',
-              builder: (context, state) => const ExpenseFormScreen(),
+              builder: (context, state) => ExpenseFormScreen(
+                workOrderId: state.uri.queryParameters['workOrderId'],
+              ),
             ),
           ],
         ),
