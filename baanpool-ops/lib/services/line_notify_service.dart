@@ -24,7 +24,12 @@ class LineNotifyService {
 
   /// Send a text push message to a LINE user.
   Future<bool> _push(String lineUserId, String message) async {
-    if (!_enabled || lineUserId.isEmpty) return false;
+    if (!_enabled || lineUserId.isEmpty) {
+      debugPrint(
+        'LINE push skipped: enabled=$_enabled, lineUserId=$lineUserId',
+      );
+      return false;
+    }
     try {
       final res = await http.post(
         Uri.parse('https://api.line.me/v2/bot/message/push'),
@@ -39,7 +44,7 @@ class LineNotifyService {
           ],
         }),
       );
-      debugPrint('LINE push → ${res.statusCode}');
+      debugPrint('LINE push → ${res.statusCode} ${res.body}');
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('LINE push error: $e');
@@ -53,7 +58,12 @@ class LineNotifyService {
     String altText,
     Map<String, dynamic> flexContent,
   ) async {
-    if (!_enabled || lineUserId.isEmpty) return false;
+    if (!_enabled || lineUserId.isEmpty) {
+      debugPrint(
+        'LINE flex push skipped: enabled=$_enabled, lineUserId=$lineUserId',
+      );
+      return false;
+    }
     try {
       final res = await http.post(
         Uri.parse('https://api.line.me/v2/bot/message/push'),
@@ -68,7 +78,7 @@ class LineNotifyService {
           ],
         }),
       );
-      debugPrint('LINE flex push → ${res.statusCode}');
+      debugPrint('LINE flex push → ${res.statusCode} ${res.body}');
       return res.statusCode == 200;
     } catch (e) {
       debugPrint('LINE flex push error: $e');
@@ -125,18 +135,29 @@ class LineNotifyService {
   // ─── 1. Notify technician: assigned a new work order ───
 
   /// Called when a work order is created or reassigned.
-  Future<void> notifyTechnicianAssigned({
+  /// Returns a result string describing what happened.
+  Future<String> notifyTechnicianAssigned({
     required String technicianUserId,
     required String workOrderTitle,
     required String propertyName,
     String priority = 'medium',
   }) async {
+    if (!_enabled) {
+      debugPrint('LINE notify disabled: LINE_MESSAGING_TOKEN is empty');
+      return 'LINE_TOKEN_MISSING';
+    }
+
     final lineId = await _getLineUserId(technicianUserId);
-    if (lineId == null || lineId.isEmpty) return;
+    debugPrint(
+      'LINE notify: technicianUserId=$technicianUserId → lineId=$lineId',
+    );
+    if (lineId == null || lineId.isEmpty) {
+      return 'NO_LINE_ID';
+    }
 
     final priorityEmoji = _priorityEmoji(priority);
 
-    await _pushFlex(
+    final ok = await _pushFlex(
       lineId,
       '📢 งานใหม่: $workOrderTitle',
       _workOrderCard(
@@ -148,6 +169,7 @@ class LineNotifyService {
         color: '#1DB446',
       ),
     );
+    return ok ? 'SENT' : 'SEND_FAILED';
   }
 
   // ─── 2. Notify caretaker + managers: PM due soon ───────

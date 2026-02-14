@@ -77,11 +77,7 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
         final path =
             'work-orders/${DateTime.now().millisecondsSinceEpoch}_$i.$ext';
         try {
-          final url = await _service.uploadFile(
-            'photos',
-            path,
-            bytes,
-          );
+          final url = await _service.uploadFile('photos', path, bytes);
           photoUrls.add(url);
         } catch (e) {
           debugPrint('Upload image $i failed: $e');
@@ -108,18 +104,43 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
           (p) => p['id'] == _selectedPropertyId,
           orElse: () => {'name': ''},
         );
-        await LineNotifyService().notifyTechnicianAssigned(
+        final notifyResult = await LineNotifyService().notifyTechnicianAssigned(
           technicianUserId: _selectedTechnicianId!,
           workOrderTitle: _titleController.text.trim(),
           propertyName: property['name'] ?? '',
           priority: _priority,
         );
+
+        if (mounted) {
+          String notiMsg;
+          Color notiColor;
+          switch (notifyResult) {
+            case 'SENT':
+              notiMsg = 'สร้างใบงานสำเร็จ + แจ้งเตือนช่างแล้ว ✅';
+              notiColor = Colors.green;
+            case 'NO_LINE_ID':
+              notiMsg = 'สร้างใบงานสำเร็จ (ช่างยังไม่ได้เชื่อมบัญชี LINE)';
+              notiColor = Colors.orange;
+            case 'LINE_TOKEN_MISSING':
+              notiMsg = 'สร้างใบงานสำเร็จ (ยังไม่ได้ตั้งค่า LINE Token)';
+              notiColor = Colors.orange;
+            default:
+              notiMsg = 'สร้างใบงานสำเร็จ (ส่งแจ้งเตือนล้มเหลว)';
+              notiColor = Colors.orange;
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(notiMsg), backgroundColor: notiColor),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('สร้างใบงานสำเร็จ')));
+        }
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('สร้างใบงานสำเร็จ')));
         context.pop();
       }
     } catch (e) {
@@ -145,9 +166,9 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')));
       }
     }
   }
@@ -260,8 +281,7 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: _imageBytes.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 8),
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
                           itemBuilder: (context, index) {
                             return Stack(
                               children: [

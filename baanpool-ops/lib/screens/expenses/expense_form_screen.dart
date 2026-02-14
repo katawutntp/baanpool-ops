@@ -48,9 +48,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -77,9 +77,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')));
       }
     }
   }
@@ -87,9 +87,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedWorkOrderId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาเลือกใบงาน')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกใบงาน')));
       return;
     }
 
@@ -99,10 +99,13 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       String? receiptUrl;
       if (_receiptBytes != null && _receiptImage != null) {
         final ext = _receiptImage!.name.split('.').last;
-        final path =
-            'receipts/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        final path = 'receipts/${DateTime.now().millisecondsSinceEpoch}.$ext';
         try {
-          receiptUrl = await _service.uploadFile('photos', path, _receiptBytes!);
+          receiptUrl = await _service.uploadFile(
+            'photos',
+            path,
+            _receiptBytes!,
+          );
         } catch (e) {
           debugPrint('Upload receipt failed: $e');
         }
@@ -137,9 +140,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('บันทึกล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('บันทึกล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -174,7 +177,8 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                           ),
                         );
                       }).toList(),
-                      onChanged: (v) => setState(() => _selectedWorkOrderId = v),
+                      onChanged: (v) =>
+                          setState(() => _selectedWorkOrderId = v),
                       validator: (v) => v == null ? 'กรุณาเลือกใบงาน' : null,
                     ),
                     const SizedBox(height: 16),
@@ -189,7 +193,8 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'กรุณากรอกจำนวนเงิน';
-                        if (double.tryParse(v) == null) return 'กรุณากรอกตัวเลข';
+                        if (double.tryParse(v) == null)
+                          return 'กรุณากรอกตัวเลข';
                         return null;
                       },
                     ),
@@ -203,7 +208,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                         prefixIcon: Icon(Icons.category),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'material', child: Text('วัสดุ')),
+                        DropdownMenuItem(
+                          value: 'material',
+                          child: Text('วัสดุ'),
+                        ),
                         DropdownMenuItem(value: 'labor', child: Text('ค่าแรง')),
                         DropdownMenuItem(
                           value: 'contractor',
@@ -254,8 +262,11 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                                     shape: BoxShape.circle,
                                   ),
                                   padding: const EdgeInsets.all(4),
-                                  child: const Icon(Icons.close,
-                                      size: 16, color: Colors.white),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
