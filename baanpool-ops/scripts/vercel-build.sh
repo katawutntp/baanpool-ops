@@ -21,6 +21,6 @@ EOF
 
 echo "=== Building Flutter Web ==="
 flutter pub get
-flutter build web --release --web-renderer canvaskit
+flutter build web --release
 
 echo "=== Build complete ==="
