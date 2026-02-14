@@ -120,10 +120,10 @@ class LineAuthService {
 
     if (existing != null) {
       // Update existing entry with LINE info
-      await _client.from('users').update({
-        'full_name': displayName,
-        'line_user_id': lineUserId,
-      }).eq('id', userId);
+      await _client
+          .from('users')
+          .update({'full_name': displayName, 'line_user_id': lineUserId})
+          .eq('id', userId);
     } else {
       // Insert new entry — default role is technician
       await _client.from('users').upsert({

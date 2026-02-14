@@ -114,17 +114,31 @@ class SupabaseService {
     String? assetId,
     String? assignedTo,
   }) async {
-    var query = _client
-        .from('pm_schedules')
-        .select('*, users:assigned_to(full_name)')
-        .eq('is_active', true);
-    if (assetId != null) query = query.eq('asset_id', assetId);
-    if (assignedTo != null) query = query.eq('assigned_to', assignedTo);
-    if (dueSoon == true) {
-      final weekFromNow = DateTime.now().add(const Duration(days: 7));
-      query = query.lte('next_due_date', weekFromNow.toIso8601String());
+    try {
+      var query = _client
+          .from('pm_schedules')
+          .select('*, users:assigned_to(full_name)')
+          .eq('is_active', true);
+      if (assetId != null) query = query.eq('asset_id', assetId);
+      if (assignedTo != null) query = query.eq('assigned_to', assignedTo);
+      if (dueSoon == true) {
+        final weekFromNow = DateTime.now().add(const Duration(days: 7));
+        query = query.lte('next_due_date', weekFromNow.toIso8601String());
+      }
+      return await query.order('next_due_date', ascending: true);
+    } catch (_) {
+      // Fallback: query without join (assigned_to column may not exist yet)
+      var query = _client
+          .from('pm_schedules')
+          .select()
+          .eq('is_active', true);
+      if (assetId != null) query = query.eq('asset_id', assetId);
+      if (dueSoon == true) {
+        final weekFromNow = DateTime.now().add(const Duration(days: 7));
+        query = query.lte('next_due_date', weekFromNow.toIso8601String());
+      }
+      return await query.order('next_due_date', ascending: true);
     }
-    return await query.order('next_due_date', ascending: true);
   }
 
   Future<void> createPmSchedule(Map<String, dynamic> data) async {
@@ -267,7 +281,8 @@ class SupabaseService {
 
       await sendLineNotification(
         lineUserId: lineUserId,
-        message: '📢 คุณได้รับมอบหมายงานใหม่!\n'
+        message:
+            '📢 คุณได้รับมอบหมายงานใหม่!\n'
             '📝 $workOrderTitle\n'
             '🏠 บ้าน: $propertyName\n'
             'เข้าไปดูรายละเอียดได้ที่แอป BaanPool Ops',

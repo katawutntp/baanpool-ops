@@ -198,10 +198,7 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                       const SizedBox(height: 8),
                       Text(
                         'ผู้ใช้สามารถเข้าสู่ระบบผ่าน LINE ได้ทันที\nไม่จำเป็นต้องตั้งรหัสผ่าน',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),

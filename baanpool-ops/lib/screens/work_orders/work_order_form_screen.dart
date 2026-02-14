@@ -41,9 +41,9 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
       _technicians = results[1];
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -88,16 +88,16 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('สร้างใบงานสำเร็จ')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('สร้างใบงานสำเร็จ')));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('สร้างใบงานล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('สร้างใบงานล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _saving = false);
@@ -136,13 +136,14 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                         prefixIcon: Icon(Icons.home),
                       ),
                       items: _properties
-                          .map((p) => DropdownMenuItem(
-                                value: p['id'] as String,
-                                child: Text(p['name'] as String),
-                              ))
+                          .map(
+                            (p) => DropdownMenuItem(
+                              value: p['id'] as String,
+                              child: Text(p['name'] as String),
+                            ),
+                          )
                           .toList(),
-                      onChanged: (v) =>
-                          setState(() => _selectedPropertyId = v),
+                      onChanged: (v) => setState(() => _selectedPropertyId = v),
                       validator: (v) => v == null ? 'กรุณาเลือกบ้าน' : null,
                     ),
                     const SizedBox(height: 16),
@@ -159,12 +160,12 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                           value: null,
                           child: Text('ยังไม่ระบุ'),
                         ),
-                        ..._technicians.map((t) => DropdownMenuItem(
-                              value: t['id'] as String,
-                              child: Text(
-                                '${t['full_name']} (${t['role']})',
-                              ),
-                            )),
+                        ..._technicians.map(
+                          (t) => DropdownMenuItem(
+                            value: t['id'] as String,
+                            child: Text('${t['full_name']} (${t['role']})'),
+                          ),
+                        ),
                       ],
                       onChanged: (v) =>
                           setState(() => _selectedTechnicianId = v),
@@ -181,7 +182,9 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                       items: const [
                         DropdownMenuItem(value: 'low', child: Text('ต่ำ')),
                         DropdownMenuItem(
-                            value: 'medium', child: Text('ปานกลาง')),
+                          value: 'medium',
+                          child: Text('ปานกลาง'),
+                        ),
                         DropdownMenuItem(value: 'high', child: Text('สูง')),
                         DropdownMenuItem(value: 'urgent', child: Text('ด่วน')),
                       ],
@@ -218,8 +221,7 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                           ? const SizedBox(
                               height: 20,
                               width: 20,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('บันทึกใบงาน'),
                     ),

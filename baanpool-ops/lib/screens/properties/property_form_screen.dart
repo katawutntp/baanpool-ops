@@ -179,12 +179,12 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
                           value: null,
                           child: Text('ไม่ระบุ'),
                         ),
-                        ..._caretakers.map((u) => DropdownMenuItem(
-                              value: u['id'] as String,
-                              child: Text(
-                                '${u['full_name']} (${u['role']})',
-                              ),
-                            )),
+                        ..._caretakers.map(
+                          (u) => DropdownMenuItem(
+                            value: u['id'] as String,
+                            child: Text('${u['full_name']} (${u['role']})'),
+                          ),
+                        ),
                       ],
                       onChanged: (v) =>
                           setState(() => _selectedCaretakerId = v),
