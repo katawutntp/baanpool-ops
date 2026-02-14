@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
-import '../../services/line_notify_service.dart';
 
 class WorkOrderFormScreen extends StatefulWidget {
   const WorkOrderFormScreen({super.key});
@@ -98,46 +97,14 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
 
       await _service.createWorkOrder(data);
 
-      // Send LINE notification to assigned technician
-      if (_selectedTechnicianId != null && _selectedPropertyId != null) {
-        final property = _properties.firstWhere(
-          (p) => p['id'] == _selectedPropertyId,
-          orElse: () => {'name': ''},
+      // LINE notification is sent automatically via database trigger
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('สร้างใบงานสำเร็จ ✅'),
+            backgroundColor: Colors.green,
+          ),
         );
-        final notifyResult = await LineNotifyService().notifyTechnicianAssigned(
-          technicianUserId: _selectedTechnicianId!,
-          workOrderTitle: _titleController.text.trim(),
-          propertyName: property['name'] ?? '',
-          priority: _priority,
-        );
-
-        if (mounted) {
-          String notiMsg;
-          Color notiColor;
-          switch (notifyResult) {
-            case 'SENT':
-              notiMsg = 'สร้างใบงานสำเร็จ + แจ้งเตือนช่างแล้ว ✅';
-              notiColor = Colors.green;
-            case 'NO_LINE_ID':
-              notiMsg = 'สร้างใบงานสำเร็จ (ช่างยังไม่ได้เชื่อมบัญชี LINE)';
-              notiColor = Colors.orange;
-            case 'LINE_TOKEN_MISSING':
-              notiMsg = 'สร้างใบงานสำเร็จ (ยังไม่ได้ตั้งค่า LINE Token)';
-              notiColor = Colors.orange;
-            default:
-              notiMsg = 'สร้างใบงานสำเร็จ (ส่งแจ้งเตือนล้มเหลว)';
-              notiColor = Colors.orange;
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(notiMsg), backgroundColor: notiColor),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('สร้างใบงานสำเร็จ')));
-        }
       }
 
       if (mounted) {

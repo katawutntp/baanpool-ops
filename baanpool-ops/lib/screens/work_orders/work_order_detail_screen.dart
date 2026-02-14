@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/work_order.dart';
 import '../../services/supabase_service.dart';
-import '../../services/line_notify_service.dart';
 
 class WorkOrderDetailScreen extends StatefulWidget {
   final String workOrderId;
@@ -61,20 +60,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
 
   Future<void> _updateStatus(String newStatus) async {
     try {
-      final oldStatus = _workOrder?.status.name ?? 'open';
       await _service.updateWorkOrderStatus(widget.workOrderId, newStatus);
 
-      // Send LINE notification to caretaker & managers
-      if (_workOrder != null) {
-        LineNotifyService().notifyWorkOrderStatusChanged(
-          workOrderTitle: _workOrder!.title,
-          propertyId: _workOrder!.propertyId,
-          propertyName: _propertyName ?? '',
-          oldStatus: oldStatus == 'inProgress' ? 'in_progress' : oldStatus,
-          newStatus: newStatus,
-          technicianName: _technicianName,
-        );
-      }
+      // LINE notification is sent automatically via database trigger
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
