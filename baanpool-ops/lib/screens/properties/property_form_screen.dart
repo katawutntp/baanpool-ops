@@ -25,11 +25,15 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
   final _ownerContactCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
+  String? _selectedCaretakerId;
+  List<Map<String, dynamic>> _caretakers = [];
+
   bool get _isEdit => widget.propertyId != null;
 
   @override
   void initState() {
     super.initState();
+    _loadCaretakers();
     if (_isEdit) _loadProperty();
   }
 
@@ -43,6 +47,14 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
     super.dispose();
   }
 
+  Future<void> _loadCaretakers() async {
+    try {
+      // Load caretakers + all users (so admin can assign anyone as caretaker)
+      final users = await _service.getUsers();
+      setState(() => _caretakers = users);
+    } catch (_) {}
+  }
+
   Future<void> _loadProperty() async {
     setState(() => _loading = true);
     try {
@@ -52,6 +64,7 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
       _ownerNameCtrl.text = data['owner_name'] ?? '';
       _ownerContactCtrl.text = data['owner_contact'] ?? '';
       _notesCtrl.text = data['notes'] ?? '';
+      _selectedCaretakerId = data['caretaker_id'] as String?;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -78,6 +91,7 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
           ? null
           : _ownerContactCtrl.text.trim(),
       'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+      'caretaker_id': _selectedCaretakerId,
     };
 
     try {
@@ -151,6 +165,29 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
                         labelText: 'เบอร์ติดต่อเจ้าของ',
                         prefixIcon: Icon(Icons.phone),
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Caretaker dropdown
+                    DropdownButtonFormField<String?>(
+                      value: _selectedCaretakerId,
+                      decoration: const InputDecoration(
+                        labelText: 'ผู้ดูแลบ้าน',
+                        prefixIcon: Icon(Icons.home_work),
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('ไม่ระบุ'),
+                        ),
+                        ..._caretakers.map((u) => DropdownMenuItem(
+                              value: u['id'] as String,
+                              child: Text(
+                                '${u['full_name']} (${u['role']})',
+                              ),
+                            )),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _selectedCaretakerId = v),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

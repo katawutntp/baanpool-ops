@@ -29,9 +29,9 @@ class _AssetsListScreenState extends State<AssetsListScreen> {
       _assets = data.map((e) => Asset.fromJson(e)).toList();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -44,47 +44,54 @@ class _AssetsListScreenState extends State<AssetsListScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _assets.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.devices_other, size: 64,
-                          color: Theme.of(context).colorScheme.outline),
-                      const SizedBox(height: 16),
-                      const Text('ยังไม่มีข้อมูลอุปกรณ์'),
-                      const SizedBox(height: 8),
-                      const Text('เพิ่มอุปกรณ์ได้ที่หน้ารายละเอียดบ้าน',
-                          style: TextStyle(fontSize: 12)),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.devices_other,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.outline,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _assets.length,
-                    itemBuilder: (context, index) {
-                      final a = _assets[index];
-                      return Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Icon(_categoryIcon(a.category)),
-                          ),
-                          title: Text(a.name),
-                          subtitle: Text([
-                            if (a.category != null) a.category!,
-                            if (a.brand != null) a.brand!,
-                          ].join(' • ')),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () async {
-                            await context.push('/assets/${a.id}');
-                            _load();
-                          },
-                        ),
-                      );
-                    },
+                  const SizedBox(height: 16),
+                  const Text('ยังไม่มีข้อมูลอุปกรณ์'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'เพิ่มอุปกรณ์ได้ที่หน้ารายละเอียดบ้าน',
+                    style: TextStyle(fontSize: 12),
                   ),
-                ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _assets.length,
+                itemBuilder: (context, index) {
+                  final a = _assets[index];
+                  return Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Icon(_categoryIcon(a.category)),
+                      ),
+                      title: Text(a.name),
+                      subtitle: Text(
+                        [
+                          if (a.category != null) a.category!,
+                          if (a.brand != null) a.brand!,
+                        ].join(' • '),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () async {
+                        await context.push('/assets/${a.id}');
+                        _load();
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
     );
   }
 

@@ -41,6 +41,7 @@ enum UserRole {
   admin,
   owner,
   manager,
+  caretaker,
   technician;
 
   static UserRole fromString(String value) {
@@ -58,6 +59,8 @@ enum UserRole {
         return 'เจ้าของ';
       case UserRole.manager:
         return 'ผู้จัดการ';
+      case UserRole.caretaker:
+        return 'ผู้ดูแลบ้าน';
       case UserRole.technician:
         return 'ช่าง';
     }

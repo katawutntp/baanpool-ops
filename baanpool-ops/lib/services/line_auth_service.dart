@@ -85,14 +85,14 @@ class LineAuthService {
     final pictureUrl = profile['pictureUrl'] as String?;
 
     // 3) Sign in or sign up in Supabase using LINE userId as identifier
-    final email = 'line_$lineUserId@baanpool.ops';
+    final email = 'line_$lineUserId@baanpool-ops.app';
     final password = 'line_${lineUserId}_${_channelSecret.substring(0, 8)}';
 
     try {
       // Try sign in first
       await _client.auth.signInWithPassword(email: email, password: password);
     } on AuthException {
-      // User doesn't exist → sign up
+      // User doesn't exist in auth → sign up
       await _client.auth.signUp(
         email: email,
         password: password,
@@ -106,13 +106,32 @@ class LineAuthService {
 
       // Sign in after sign up
       await _client.auth.signInWithPassword(email: email, password: password);
+    }
 
-      // Insert into users table
+    // 4) Upsert into users table with line_user_id
+    final userId = _client.auth.currentUser!.id;
+
+    // Check if there's already a users entry (admin may have pre-created)
+    final existing = await _client
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (existing != null) {
+      // Update existing entry with LINE info
+      await _client.from('users').update({
+        'full_name': displayName,
+        'line_user_id': lineUserId,
+      }).eq('id', userId);
+    } else {
+      // Insert new entry — default role is technician
       await _client.from('users').upsert({
-        'id': _client.auth.currentUser!.id,
+        'id': userId,
         'email': email,
         'full_name': displayName,
         'role': 'technician',
+        'line_user_id': lineUserId,
       });
     }
   }

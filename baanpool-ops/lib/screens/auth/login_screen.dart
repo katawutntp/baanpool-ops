@@ -89,31 +89,50 @@ class _LoginScreenState extends State<LoginScreen> {
             throw Exception('สร้างบัญชีไม่สำเร็จ');
           }
 
-          // Check if this is the first user → make admin
-          // Try to count existing users (may fail due to RLS, that's ok)
+          // Check if admin pre-created this user in users table
           String role = 'admin'; // First user = admin by default
+          String fullName = email.split('@').first;
           try {
-            final existingUsers = await Supabase.instance.client
+            final existing = await Supabase.instance.client
                 .from('users')
-                .select('id')
-                .limit(2);
-            if (existingUsers.length > 1) {
-              role = 'technician'; // Not the first user
+                .select()
+                .eq('email', email)
+                .maybeSingle();
+            if (existing != null) {
+              // Admin pre-created this user → update ID to match auth
+              role = existing['role'] as String? ?? 'technician';
+              fullName = existing['full_name'] as String? ?? fullName;
+              await Supabase.instance.client
+                  .from('users')
+                  .update({'id': signUpRes.user!.id})
+                  .eq('email', email);
+            } else {
+              // Check if we're the first user → admin
+              final existingUsers = await Supabase.instance.client
+                  .from('users')
+                  .select('id')
+                  .limit(2);
+              if (existingUsers.isNotEmpty) {
+                role = 'technician'; // Not the first user
+              }
+              // Insert new user entry
+              await Supabase.instance.client.from('users').upsert({
+                'id': signUpRes.user!.id,
+                'email': email,
+                'full_name': fullName,
+                'role': role,
+              });
             }
           } catch (_) {
-            // RLS may block, default to admin for first signup
-          }
-
-          // Insert into users table
-          try {
-            await Supabase.instance.client.from('users').upsert({
-              'id': signUpRes.user!.id,
-              'email': email,
-              'full_name': email.split('@').first,
-              'role': role,
-            });
-          } catch (_) {
-            // May fail due to RLS on first run before migration_002
+            // RLS may block, try insert anyway
+            try {
+              await Supabase.instance.client.from('users').upsert({
+                'id': signUpRes.user!.id,
+                'email': email,
+                'full_name': fullName,
+                'role': role,
+              });
+            } catch (_) {}
           }
 
           // Sign in after sign up
@@ -126,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'สร้างบัญชีใหม่สำเร็จ (Role: ${role == 'admin' ? 'ผู้ดูแลระบบ' : 'ช่าง'})',
+                  'สร้างบัญชีใหม่สำเร็จ (Role: ${role == 'admin' ? 'ผู้ดูแลระบบ' : role})',
                 ),
                 backgroundColor: Colors.green,
               ),

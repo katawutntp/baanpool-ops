@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service layer for all Supabase operations
@@ -22,7 +25,7 @@ class SupabaseService {
   Future<List<Map<String, dynamic>>> getProperties() async {
     return await _client
         .from('properties')
-        .select()
+        .select('*, caretaker:caretaker_id(full_name)')
         .order('name', ascending: true);
   }
 
@@ -184,6 +187,15 @@ class SupabaseService {
         .order('full_name', ascending: true);
   }
 
+  /// Get all users with 'caretaker' role
+  Future<List<Map<String, dynamic>>> getCaretakers() async {
+    return await _client
+        .from('users')
+        .select()
+        .eq('role', 'caretaker')
+        .order('full_name', ascending: true);
+  }
+
   /// Get a single user by ID
   Future<Map<String, dynamic>?> getUser(String id) async {
     return await _client.from('users').select().eq('id', id).maybeSingle();
@@ -199,31 +211,69 @@ class SupabaseService {
     await _client.from('users').update(data).eq('id', userId);
   }
 
-  /// Create admin user via email/password auth + users table
-  Future<void> createAdminUser({
-    required String email,
-    required String password,
+  /// Create a new user entry in the users table directly.
+  /// The user can log in later via LINE or email signup.
+  /// This avoids Supabase Auth signUp rate limiting (429).
+  Future<void> createUser({
     required String fullName,
+    required String email,
+    required String role,
     String? phone,
   }) async {
-    // Sign up in Supabase Auth
-    final authRes = await _client.auth.signUp(
-      email: email,
-      password: password,
-      data: {'full_name': fullName},
-    );
-
-    if (authRes.user == null) {
-      throw Exception('Failed to create auth user');
-    }
-
-    // Insert into users table with admin role
-    await _client.from('users').upsert({
-      'id': authRes.user!.id,
+    await _client.from('users').insert({
       'email': email,
       'full_name': fullName,
-      'role': 'admin',
+      'role': role,
       'phone': phone,
     });
+  }
+
+  // ─── LINE Notification ────────────────────────────────
+
+  /// Send a LINE push message to a user (requires line_user_id)
+  Future<void> sendLineNotification({
+    required String lineUserId,
+    required String message,
+  }) async {
+    final token = dotenv.env['LINE_MESSAGING_TOKEN'];
+    if (token == null || token.isEmpty) return;
+
+    await http.post(
+      Uri.parse('https://api.line.me/v2/bot/message/push'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'to': lineUserId,
+        'messages': [
+          {'type': 'text', 'text': message},
+        ],
+      }),
+    );
+  }
+
+  /// Notify assigned technician about a new work order via LINE
+  Future<void> notifyWorkOrderAssigned({
+    required String assignedToUserId,
+    required String workOrderTitle,
+    required String propertyName,
+  }) async {
+    try {
+      final user = await getUser(assignedToUserId);
+      if (user == null) return;
+      final lineUserId = user['line_user_id'] as String?;
+      if (lineUserId == null || lineUserId.isEmpty) return;
+
+      await sendLineNotification(
+        lineUserId: lineUserId,
+        message: '📢 คุณได้รับมอบหมายงานใหม่!\n'
+            '📝 $workOrderTitle\n'
+            '🏠 บ้าน: $propertyName\n'
+            'เข้าไปดูรายละเอียดได้ที่แอป BaanPool Ops',
+      );
+    } catch (_) {
+      // Silent fail — notification is optional
+    }
   }
 }

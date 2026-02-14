@@ -90,8 +90,9 @@ final appRouter = GoRouter(
               routes: [
                 GoRoute(
                   path: 'edit',
-                  builder: (context, state) =>
-                      PropertyFormScreen(propertyId: state.pathParameters['id']!),
+                  builder: (context, state) => PropertyFormScreen(
+                    propertyId: state.pathParameters['id']!,
+                  ),
                 ),
               ],
             ),

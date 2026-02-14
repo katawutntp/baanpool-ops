@@ -35,9 +35,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       _schedules = sData.map((e) => PmSchedule.fromJson(e)).toList();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -48,9 +48,14 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('ยืนยันลบอุปกรณ์'),
-        content: const Text('ลบอุปกรณ์นี้จะลบ PM Schedule ที่เกี่ยวข้องทั้งหมด'),
+        content: const Text(
+          'ลบอุปกรณ์นี้จะลบ PM Schedule ที่เกี่ยวข้องทั้งหมด',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ยกเลิก')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -63,16 +68,16 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     try {
       await _service.deleteAsset(widget.assetId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ลบอุปกรณ์สำเร็จ')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ลบอุปกรณ์สำเร็จ')));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ลบล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ลบล้มเหลว: $e')));
       }
     }
   }
@@ -94,20 +99,39 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'ชื่ออุปกรณ์ *')),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'ชื่ออุปกรณ์ *'),
+              ),
               const SizedBox(height: 12),
-              TextField(controller: categoryCtrl, decoration: const InputDecoration(labelText: 'ประเภท')),
+              TextField(
+                controller: categoryCtrl,
+                decoration: const InputDecoration(labelText: 'ประเภท'),
+              ),
               const SizedBox(height: 12),
-              TextField(controller: brandCtrl, decoration: const InputDecoration(labelText: 'ยี่ห้อ')),
+              TextField(
+                controller: brandCtrl,
+                decoration: const InputDecoration(labelText: 'ยี่ห้อ'),
+              ),
               const SizedBox(height: 12),
-              TextField(controller: modelCtrl, decoration: const InputDecoration(labelText: 'รุ่น')),
+              TextField(
+                controller: modelCtrl,
+                decoration: const InputDecoration(labelText: 'รุ่น'),
+              ),
               const SizedBox(height: 12),
-              TextField(controller: notesCtrl, decoration: const InputDecoration(labelText: 'หมายเหตุ'), maxLines: 2),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(labelText: 'หมายเหตุ'),
+                maxLines: 2,
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ยกเลิก')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
           FilledButton(
             onPressed: () {
               if (nameCtrl.text.trim().isEmpty) return;
@@ -122,7 +146,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     try {
       await _service.updateAsset(widget.assetId, {
         'name': nameCtrl.text.trim(),
-        'category': categoryCtrl.text.trim().isEmpty ? null : categoryCtrl.text.trim(),
+        'category': categoryCtrl.text.trim().isEmpty
+            ? null
+            : categoryCtrl.text.trim(),
         'brand': brandCtrl.text.trim().isEmpty ? null : brandCtrl.text.trim(),
         'model': modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
         'notes': notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
@@ -130,7 +156,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('แก้ไขล้มเหลว: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('แก้ไขล้มเหลว: $e')));
       }
     }
   }
@@ -183,10 +211,12 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   value: selectedFreq,
                   decoration: const InputDecoration(labelText: 'ความถี่'),
                   items: PmFrequency.values
-                      .map((f) => DropdownMenuItem(
-                            value: f,
-                            child: Text(f.displayName),
-                          ))
+                      .map(
+                        (f) => DropdownMenuItem(
+                          value: f,
+                          child: Text(f.displayName),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) {
                     if (v != null) setDialogState(() => selectedFreq = v);
@@ -205,7 +235,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                       context: ctx,
                       initialDate: nextDue,
                       firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+                      lastDate: DateTime.now().add(
+                        const Duration(days: 365 * 5),
+                      ),
                     );
                     if (picked != null) {
                       setDialogState(() => nextDue = picked);
@@ -217,14 +249,15 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   value: selectedTechId,
                   decoration: const InputDecoration(labelText: 'มอบหมายช่าง'),
                   items: [
-                    const DropdownMenuItem(
-                      value: null,
-                      child: Text('ไม่ระบุ'),
+                    const DropdownMenuItem(value: null, child: Text('ไม่ระบุ')),
+                    ...technicians.map(
+                      (t) => DropdownMenuItem(
+                        value: t['id'] as String,
+                        child: Text(
+                          t['full_name'] as String? ?? t['email'] as String,
+                        ),
+                      ),
                     ),
-                    ...technicians.map((t) => DropdownMenuItem(
-                          value: t['id'] as String,
-                          child: Text(t['full_name'] as String? ?? t['email'] as String),
-                        )),
                   ],
                   onChanged: (v) {
                     setDialogState(() => selectedTechId = v);
@@ -256,7 +289,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
         'property_id': _asset!.propertyId,
         'asset_id': widget.assetId,
         'title': titleCtrl.text.trim(),
-        'description': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+        'description': descCtrl.text.trim().isEmpty
+            ? null
+            : descCtrl.text.trim(),
         'frequency': selectedFreq.name,
         'next_due_date': nextDue.toIso8601String().split('T').first,
         'assigned_to': selectedTechId,
@@ -283,7 +318,10 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
         title: const Text('ยืนยันลบ PM Schedule'),
         content: Text('ลบ "${s.title}" ?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ยกเลิก')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -298,9 +336,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ลบล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('ลบล้มเหลว: $e')));
       }
     }
   }
@@ -329,7 +367,10 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       appBar: AppBar(
         title: Text(a.name),
         actions: [
-          IconButton(icon: const Icon(Icons.edit), onPressed: _showEditAssetDialog),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _showEditAssetDialog,
+          ),
           IconButton(icon: const Icon(Icons.delete), onPressed: _deleteAsset),
         ],
       ),
@@ -354,11 +395,16 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                     if (a.model != null)
                       _infoRow(Icons.info_outline, 'รุ่น', a.model!),
                     if (a.installDate != null)
-                      _infoRow(Icons.calendar_today, 'วันติดตั้ง',
-                          '${a.installDate!.day}/${a.installDate!.month}/${a.installDate!.year}'),
+                      _infoRow(
+                        Icons.calendar_today,
+                        'วันติดตั้ง',
+                        '${a.installDate!.day}/${a.installDate!.month}/${a.installDate!.year}',
+                      ),
                     if (a.warrantyExpiry != null)
                       _infoRow(
-                        a.isWarrantyExpired ? Icons.warning : Icons.verified_user,
+                        a.isWarrantyExpired
+                            ? Icons.warning
+                            : Icons.verified_user,
                         'ประกัน',
                         '${a.warrantyExpiry!.day}/${a.warrantyExpiry!.month}/${a.warrantyExpiry!.year}'
                             '${a.isWarrantyExpired ? " (หมดแล้ว)" : ""}',
@@ -375,8 +421,10 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('PM Schedule (${_schedules.length})',
-                    style: theme.textTheme.titleMedium),
+                Text(
+                  'PM Schedule (${_schedules.length})',
+                  style: theme.textTheme.titleMedium,
+                ),
                 FilledButton.tonalIcon(
                   onPressed: _showAddScheduleDialog,
                   icon: const Icon(Icons.add, size: 18),
@@ -393,8 +441,11 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   child: Center(
                     child: Column(
                       children: [
-                        Icon(Icons.schedule, size: 48,
-                            color: theme.colorScheme.outline),
+                        Icon(
+                          Icons.schedule,
+                          size: 48,
+                          color: theme.colorScheme.outline,
+                        ),
                         const SizedBox(height: 8),
                         const Text('ยังไม่มี PM Schedule'),
                       ],
@@ -442,13 +493,22 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   child: Text(s.title, style: theme.textTheme.titleSmall),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(statusText, style: TextStyle(
-                    fontSize: 12, color: statusColor, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
                 IconButton(
@@ -466,8 +526,10 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
               spacing: 16,
               children: [
                 _chip(Icons.repeat, s.frequency.displayName),
-                _chip(Icons.calendar_today,
-                    '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}'),
+                _chip(
+                  Icons.calendar_today,
+                  '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}',
+                ),
                 if (s.assignedToName != null)
                   _chip(Icons.person, s.assignedToName!),
                 if (s.assignedTo != null && s.assignedToName == null)

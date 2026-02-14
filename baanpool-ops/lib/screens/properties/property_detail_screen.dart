@@ -228,6 +228,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       _infoRow(Icons.person, 'เจ้าของ', p.ownerName!),
                     if (p.ownerContact != null)
                       _infoRow(Icons.phone, 'เบอร์ติดต่อ', p.ownerContact!),
+                    if (p.caretakerName != null)
+                      _infoRow(Icons.home_work, 'ผู้ดูแลบ้าน', p.caretakerName!),
                     if (p.notes != null)
                       _infoRow(Icons.notes, 'หมายเหตุ', p.notes!),
                   ],

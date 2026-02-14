@@ -129,10 +129,10 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
 
   void _showAddUserDialog() {
     final emailController = TextEditingController();
-    final passwordController = TextEditingController();
     final nameController = TextEditingController();
+    final phoneController = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    UserRole selectedRole = UserRole.admin;
+    UserRole selectedRole = UserRole.technician;
 
     showDialog(
       context: context,
@@ -150,7 +150,7 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                       TextFormField(
                         controller: nameController,
                         decoration: const InputDecoration(
-                          labelText: 'ชื่อ-นามสกุล',
+                          labelText: 'ชื่อ-นามสกุล *',
                           prefixIcon: Icon(Icons.person),
                         ),
                         validator: (v) =>
@@ -161,7 +161,7 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
-                          labelText: 'อีเมล',
+                          labelText: 'อีเมล *',
                           prefixIcon: Icon(Icons.email),
                         ),
                         validator: (v) =>
@@ -169,19 +169,12 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
-                        controller: passwordController,
-                        obscureText: true,
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(
-                          labelText: 'รหัสผ่าน',
-                          prefixIcon: Icon(Icons.lock),
+                          labelText: 'เบอร์โทร',
+                          prefixIcon: Icon(Icons.phone),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty)
-                            return 'กรุณากรอกรหัสผ่าน';
-                          if (v.length < 6)
-                            return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
-                          return null;
-                        },
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<UserRole>(
@@ -202,6 +195,14 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                           }
                         },
                       ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'ผู้ใช้สามารถเข้าสู่ระบบผ่าน LINE ได้ทันที\nไม่จำเป็นต้องตั้งรหัสผ่าน',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -218,41 +219,14 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                     Navigator.pop(context);
 
                     try {
-                      // Save current session
-                      final currentSession =
-                          Supabase.instance.client.auth.currentSession;
-
-                      await _svc.createAdminUser(
-                        email: emailController.text.trim(),
-                        password: passwordController.text,
+                      await _svc.createUser(
                         fullName: nameController.text.trim(),
+                        email: emailController.text.trim(),
+                        role: selectedRole.name,
+                        phone: phoneController.text.trim().isEmpty
+                            ? null
+                            : phoneController.text.trim(),
                       );
-
-                      // Update role if not admin
-                      if (selectedRole != UserRole.admin) {
-                        // Get the newly created user
-                        final users = await _svc.getUsers();
-                        final newUser = users.firstWhere(
-                          (u) => u['email'] == emailController.text.trim(),
-                          orElse: () => {},
-                        );
-                        if (newUser.isNotEmpty) {
-                          await _svc.updateUserRole(
-                            newUser['id'],
-                            selectedRole.name,
-                          );
-                        }
-                      }
-
-                      // Restore admin session if creating another user signed us out
-                      if (currentSession != null &&
-                          Supabase.instance.client.auth.currentUser?.id !=
-                              currentSession.user.id) {
-                        await Supabase.instance.client.auth.recoverSession(
-                          currentSession.refreshToken ?? '',
-                        );
-                        await AuthStateService().loadUserProfile();
-                      }
 
                       await _loadUsers();
 
@@ -293,6 +267,8 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
         return Icons.star;
       case UserRole.manager:
         return Icons.manage_accounts;
+      case UserRole.caretaker:
+        return Icons.home_work;
       case UserRole.technician:
         return Icons.engineering;
     }
@@ -306,6 +282,8 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
         return 'เจ้าของ เข้าถึงทุกส่วนได้';
       case UserRole.manager:
         return 'ผู้จัดการ เข้าถึงทุกส่วนได้';
+      case UserRole.caretaker:
+        return 'ผู้ดูแลบ้าน เห็นเฉพาะบ้านที่ดูแล';
       case UserRole.technician:
         return 'เห็นเฉพาะงานที่ได้รับมอบหมาย';
     }
@@ -319,6 +297,8 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
         return Colors.amber.shade700;
       case UserRole.manager:
         return Colors.blue;
+      case UserRole.caretaker:
+        return Colors.green;
       case UserRole.technician:
         return Colors.teal;
     }

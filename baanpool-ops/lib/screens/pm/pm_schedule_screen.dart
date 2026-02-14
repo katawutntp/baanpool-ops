@@ -29,9 +29,9 @@ class _PmScheduleScreenState extends State<PmScheduleScreen> {
       _schedules = data.map((e) => PmSchedule.fromJson(e)).toList();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('โหลดข้อมูลล้มเหลว: $e')));
       }
     }
     if (mounted) setState(() => _loading = false);
@@ -46,31 +46,36 @@ class _PmScheduleScreenState extends State<PmScheduleScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _schedules.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.schedule, size: 64,
-                          color: theme.colorScheme.outline),
-                      const SizedBox(height: 16),
-                      const Text('ยังไม่มี PM Schedule'),
-                      const SizedBox(height: 8),
-                      const Text('เพิ่ม PM Schedule ได้ที่หน้าอุปกรณ์ของแต่ละบ้าน',
-                          style: TextStyle(fontSize: 12)),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.schedule,
+                    size: 64,
+                    color: theme.colorScheme.outline,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _schedules.length,
-                    itemBuilder: (context, index) {
-                      final s = _schedules[index];
-                      return _buildScheduleCard(s);
-                    },
+                  const SizedBox(height: 16),
+                  const Text('ยังไม่มี PM Schedule'),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'เพิ่ม PM Schedule ได้ที่หน้าอุปกรณ์ของแต่ละบ้าน',
+                    style: TextStyle(fontSize: 12),
                   ),
-                ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _schedules.length,
+                itemBuilder: (context, index) {
+                  final s = _schedules[index];
+                  return _buildScheduleCard(s);
+                },
+              ),
+            ),
     );
   }
 
@@ -108,17 +113,21 @@ class _PmScheduleScreenState extends State<PmScheduleScreen> {
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(statusText,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: statusColor,
-                          fontWeight: FontWeight.bold,
-                        )),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -131,8 +140,10 @@ class _PmScheduleScreenState extends State<PmScheduleScreen> {
                 spacing: 16,
                 children: [
                   _chip(Icons.repeat, s.frequency.displayName),
-                  _chip(Icons.calendar_today,
-                      '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}'),
+                  _chip(
+                    Icons.calendar_today,
+                    '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}',
+                  ),
                   if (s.assignedToName != null)
                     _chip(Icons.person, s.assignedToName!),
                 ],

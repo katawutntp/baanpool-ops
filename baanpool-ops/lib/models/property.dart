@@ -6,6 +6,8 @@ class Property {
   final String? ownerName;
   final String? ownerContact;
   final String? notes;
+  final String? caretakerId;
+  final String? caretakerName; // joined from users table
   final DateTime createdAt;
 
   const Property({
@@ -15,10 +17,18 @@ class Property {
     this.ownerName,
     this.ownerContact,
     this.notes,
+    this.caretakerId,
+    this.caretakerName,
     required this.createdAt,
   });
 
   factory Property.fromJson(Map<String, dynamic> json) {
+    // Handle joined caretaker user data
+    String? ctName;
+    if (json['caretaker'] is Map) {
+      ctName = json['caretaker']['full_name'] as String?;
+    }
+
     return Property(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -26,6 +36,8 @@ class Property {
       ownerName: json['owner_name'] as String?,
       ownerContact: json['owner_contact'] as String?,
       notes: json['notes'] as String?,
+      caretakerId: json['caretaker_id'] as String?,
+      caretakerName: ctName,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -36,5 +48,6 @@ class Property {
     'owner_name': ownerName,
     'owner_contact': ownerContact,
     'notes': notes,
+    'caretaker_id': caretakerId,
   };
 }
