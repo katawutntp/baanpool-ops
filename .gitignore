@@ -1,0 +1,17 @@
+# Build outputs
+baanpool-ops/build/
+baanpool-ops/.dart_tool/
+baanpool-ops/.flutter-plugins
+baanpool-ops/.flutter-plugins-dependencies
+
+# Environment secrets
+baanpool-ops/.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
