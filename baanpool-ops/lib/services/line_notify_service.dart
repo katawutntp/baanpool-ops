@@ -319,6 +319,17 @@ class LineNotifyService {
           p['id'] as String: p['caretaker_id'] as String?,
       };
 
+      // Load active work orders to skip PMs that already have one
+      final activeWorkOrders = await _client
+          .from('work_orders')
+          .select('asset_id, title')
+          .inFilter('status', ['open', 'in_progress']);
+      final activeWoKeys = <String>{};
+      for (final wo in activeWorkOrders) {
+        final aid = wo['asset_id'] as String?;
+        if (aid != null) activeWoKeys.add(aid);
+      }
+
       for (final pm in duePms) {
         final nextDue = DateTime.parse(pm['next_due_date'] as String);
         final daysUntilDue = nextDue.difference(DateTime.now()).inDays;
@@ -327,9 +338,16 @@ class LineNotifyService {
         String assetName = 'ไม่ระบุ';
         String propertyId = pm['property_id'] as String;
         String? assignedTo = pm['assigned_to'] as String?;
+        final assetId = pm['asset_id'] as String?;
 
         if (pm['asset'] is Map) {
           assetName = pm['asset']['name'] as String? ?? 'ไม่ระบุ';
+        }
+
+        // Skip if an active work order already exists for this asset
+        if (assetId != null && activeWoKeys.contains(assetId)) {
+          debugPrint('PM skip: active work order exists for asset $assetId');
+          continue;
         }
 
         final propertyName = propNames[propertyId] ?? 'ไม่ทราบบ้าน';

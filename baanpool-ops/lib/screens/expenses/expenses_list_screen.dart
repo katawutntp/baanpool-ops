@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/expense.dart';
 import '../../services/supabase_service.dart';
+import '../../utils/csv_downloader.dart'
+    if (dart.library.html) '../../utils/csv_downloader_web.dart';
 
 class ExpensesListScreen extends StatefulWidget {
   const ExpensesListScreen({super.key});
@@ -203,78 +204,22 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
 
     final csvText = buf.toString();
 
-    // Copy to clipboard
-    await Clipboard.setData(ClipboardData(text: csvText));
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green),
-              const SizedBox(width: 8),
-              const Text('Export สำเร็จ'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'รายงาน $monthLabel',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'รวม ${_expensesByProperty.values.fold<int>(0, (sum, list) => sum + list.length)} รายการ, ${_formatAmount(_grandTotal)}',
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'คัดลอกข้อมูล CSV ไปยัง clipboard แล้ว\nสามารถวางลงใน Excel หรือ Google Sheets ได้',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              // Preview
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: SingleChildScrollView(
-                  child: Text(
-                    csvText,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('ปิด'),
-            ),
-            FilledButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: csvText));
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(const SnackBar(content: Text('คัดลอกแล้ว')));
-                Navigator.pop(ctx);
-              },
-              icon: const Icon(Icons.copy, size: 18),
-              label: const Text('คัดลอกอีกครั้ง'),
-            ),
-          ],
-        ),
-      );
+    // Download as CSV file
+    final fileName =
+        'รายงานค่าใช้จ่าย_${_monthName(_selectedMonth)}_$_selectedYear.csv';
+    try {
+      downloadCsvFile(csvText, fileName);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ดาวน์โหลด $fileName สำเร็จ')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ไม่สามารถดาวน์โหลดไฟล์ได้: $e')),
+        );
+      }
     }
   }
 
