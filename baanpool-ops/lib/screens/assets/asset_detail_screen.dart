@@ -312,8 +312,10 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   }
 
   void _createWorkOrderFromPm(PmSchedule s) {
-    final dateStr = '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}';
-    final description = 'PM: ${s.title}\nกำหนด: $dateStr\nความถี่: ${s.frequency.displayName}'
+    final dateStr =
+        '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}';
+    final description =
+        'PM: ${s.title}\nกำหนด: $dateStr\nความถี่: ${s.frequency.displayName}'
         '${s.description != null ? "\nรายละเอียด: ${s.description}" : ""}';
 
     final queryParams = <String, String>{
