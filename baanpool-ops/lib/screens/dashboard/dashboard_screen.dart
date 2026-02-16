@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../app/theme.dart';
 import '../../services/auth_state_service.dart';
+import '../../services/line_notify_service.dart';
 import '../../services/supabase_service.dart';
 
 /// Dashboard — งานด่วน, งานวันนี้, PM ใกล้ครบ, ใบงานล่าสุด
@@ -55,6 +56,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       try {
         final pmData = await _service.getPmSchedules(dueSoon: true);
         _pmDueSoonCount = pmData.length;
+
+        // Trigger PM notifications check (LINE + in-app) in background
+        if (_pmDueSoonCount > 0) {
+          LineNotifyService().checkAndNotifyPmDueSchedules();
+        }
       } catch (_) {
         _pmDueSoonCount = 0;
       }

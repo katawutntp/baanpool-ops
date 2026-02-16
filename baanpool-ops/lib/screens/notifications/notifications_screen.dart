@@ -140,6 +140,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       final refId = noti['reference_id'] as String?;
                       if (type == 'work_order' && refId != null) {
                         context.push('/work-orders/$refId');
+                      } else if (type == 'pm') {
+                        context.push('/pm');
                       }
                     },
                   );

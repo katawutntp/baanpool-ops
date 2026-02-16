@@ -11,6 +11,7 @@ class NotificationService extends ChangeNotifier {
 
   final _client = Supabase.instance.client;
   RealtimeChannel? _channel;
+  Timer? _pollTimer;
 
   List<Map<String, dynamic>> _notifications = [];
   int _unreadCount = 0;
@@ -21,22 +22,40 @@ class NotificationService extends ChangeNotifier {
   bool get hasUnread => _unreadCount > 0;
 
   /// Initialize: load existing notifications + subscribe to realtime
+  /// Can be called multiple times safely (re-subscribes if user changed)
   Future<void> init() async {
-    if (_initialized) return;
     final user = _client.auth.currentUser;
     if (user == null) return;
+
+    // If already initialized for this user, skip
+    if (_initialized) {
+      // But still refresh to get latest
+      await _loadNotifications();
+      return;
+    }
 
     _initialized = true;
     await _loadNotifications();
     _subscribeRealtime(user.id);
+    _startPolling();
+  }
+
+  /// Re-initialize (e.g. after login)
+  Future<void> reinit() async {
+    dispose2();
+    await init();
   }
 
   /// Load existing notifications from DB
   Future<void> _loadNotifications() async {
     try {
+      final user = _client.auth.currentUser;
+      if (user == null) return;
+
       final data = await _client
           .from('notifications')
           .select()
+          .eq('user_id', user.id)
           .order('created_at', ascending: false)
           .limit(50);
       _notifications = List<Map<String, dynamic>>.from(data);
@@ -62,13 +81,41 @@ class NotificationService extends ChangeNotifier {
             value: userId,
           ),
           callback: (payload) {
+            debugPrint('Realtime notification received: ${payload.newRecord}');
             final newNoti = payload.newRecord;
-            _notifications.insert(0, newNoti);
-            _unreadCount++;
-            notifyListeners();
+            if (newNoti.isNotEmpty) {
+              // Check if we already have this notification (avoid duplicates)
+              final existingIdx = _notifications.indexWhere(
+                (n) => n['id'] == newNoti['id'],
+              );
+              if (existingIdx < 0) {
+                _notifications.insert(0, newNoti);
+                _unreadCount++;
+                notifyListeners();
+              }
+            }
           },
         )
-        .subscribe();
+        .subscribe((status, [error]) {
+          debugPrint('Realtime subscription status: $status, error: $error');
+          if (status == RealtimeSubscribeStatus.channelError) {
+            // Retry subscription after a delay
+            Future.delayed(const Duration(seconds: 5), () {
+              if (_initialized) {
+                debugPrint('Retrying realtime subscription...');
+                _subscribeRealtime(userId);
+              }
+            });
+          }
+        });
+  }
+
+  /// Fallback: poll every 30 seconds in case realtime misses events
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _loadNotifications();
+    });
   }
 
   /// Reload notifications
@@ -98,9 +145,13 @@ class NotificationService extends ChangeNotifier {
   /// Mark all as read
   Future<void> markAllAsRead() async {
     try {
+      final user = _client.auth.currentUser;
+      if (user == null) return;
+
       await _client
           .from('notifications')
           .update({'is_read': true})
+          .eq('user_id', user.id)
           .eq('is_read', false);
 
       for (int i = 0; i < _notifications.length; i++) {
@@ -113,10 +164,12 @@ class NotificationService extends ChangeNotifier {
     }
   }
 
-  /// Dispose realtime channel
+  /// Dispose realtime channel and polling
   void dispose2() {
     _channel?.unsubscribe();
     _channel = null;
+    _pollTimer?.cancel();
+    _pollTimer = null;
     _initialized = false;
   }
 }

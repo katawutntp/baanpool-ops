@@ -171,7 +171,7 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
                     DropdownButtonFormField<String?>(
                       value: _selectedCaretakerId,
                       decoration: const InputDecoration(
-                        labelText: 'ผู้ดูแลบ้าน',
+                        labelText: 'ผู้จัดการบ้าน',
                         prefixIcon: Icon(Icons.home_work),
                       ),
                       items: [

@@ -172,10 +172,10 @@ class LineNotifyService {
     return ok ? 'SENT' : 'SEND_FAILED';
   }
 
-  // ─── 2. Notify caretaker + managers: PM due soon ───────
+  // ─── 2. Notify technician + caretaker + managers: PM due soon ───────
 
   /// Called when PM schedule is due within 7 days or overdue.
-  /// Notifies the property caretaker + all managers/admins.
+  /// Notifies the assigned technician + property manager + all managers/admins.
   Future<void> notifyPmDueSoon({
     required String propertyId,
     required String propertyName,
@@ -183,26 +183,38 @@ class LineNotifyService {
     required String assetName,
     required DateTime nextDueDate,
     required int daysUntilDue,
+    String? assignedTo,
   }) async {
     final isOverdue = daysUntilDue < 0;
+    final isDueToday = daysUntilDue == 0;
     final statusText = isOverdue
         ? '⚠️ เกินกำหนด ${-daysUntilDue} วัน'
+        : isDueToday
+        ? '⏰ ถึงกำหนดวันนี้'
         : '⏰ อีก $daysUntilDue วัน';
     final dateStr =
         '${nextDueDate.day}/${nextDueDate.month}/${nextDueDate.year}';
 
     final message =
-        '${isOverdue ? "🔴" : "🟡"} แจ้งเตือน PM\n'
+        '${isOverdue || isDueToday ? "🔴" : "🟡"} แจ้งเตือน PM\n'
         '📋 $pmTitle\n'
         '🏠 บ้าน: $propertyName\n'
         '🔧 อุปกรณ์: $assetName\n'
         '📅 กำหนด: $dateStr\n'
         '$statusText';
 
-    // Collect recipients: caretaker + managers/admins
+    // Collect recipients: technician + caretaker + managers/admins
     final recipients = <String>{};
 
-    // Caretaker of this property
+    // Assigned technician
+    if (assignedTo != null && assignedTo.isNotEmpty) {
+      final techLineId = await _getLineUserId(assignedTo);
+      if (techLineId != null && techLineId.isNotEmpty) {
+        recipients.add(techLineId);
+      }
+    }
+
+    // Property manager (caretaker of this property)
     final caretaker = await _getPropertyCaretaker(propertyId);
     if (caretaker != null) {
       final lid = caretaker['line_user_id'] as String?;
@@ -296,9 +308,15 @@ class LineNotifyService {
       if (duePms.isEmpty) return 0;
 
       // Load all properties for name lookup
-      final properties = await _client.from('properties').select('id, name');
+      final properties = await _client
+          .from('properties')
+          .select('id, name, caretaker_id');
       final propNames = <String, String>{
         for (final p in properties) p['id'] as String: p['name'] as String,
+      };
+      final propCaretakers = <String, String?>{
+        for (final p in properties)
+          p['id'] as String: p['caretaker_id'] as String?,
       };
 
       for (final pm in duePms) {
@@ -308,6 +326,7 @@ class LineNotifyService {
         // Resolve asset & property info
         String assetName = 'ไม่ระบุ';
         String propertyId = pm['property_id'] as String;
+        String? assignedTo = pm['assigned_to'] as String?;
 
         if (pm['asset'] is Map) {
           assetName = pm['asset']['name'] as String? ?? 'ไม่ระบุ';
@@ -315,6 +334,7 @@ class LineNotifyService {
 
         final propertyName = propNames[propertyId] ?? 'ไม่ทราบบ้าน';
 
+        // Send LINE notifications to technician + property manager + admins
         await notifyPmDueSoon(
           propertyId: propertyId,
           propertyName: propertyName,
@@ -322,13 +342,87 @@ class LineNotifyService {
           assetName: assetName,
           nextDueDate: nextDue,
           daysUntilDue: daysUntilDue,
+          assignedTo: assignedTo,
         );
+
+        // Create in-app notifications
+        await _createPmInAppNotifications(
+          pmId: pm['id'] as String,
+          pmTitle: pm['title'] as String,
+          propertyId: propertyId,
+          propertyName: propertyName,
+          daysUntilDue: daysUntilDue,
+          nextDueDate: nextDue,
+          assignedTo: assignedTo,
+          caretakerId: propCaretakers[propertyId],
+        );
+
         sent++;
       }
     } catch (e) {
       debugPrint('PM notification check error: $e');
     }
     return sent;
+  }
+
+  // ─── 5. Create in-app notifications for PM ─────────────
+
+  Future<void> _createPmInAppNotifications({
+    required String pmId,
+    required String pmTitle,
+    required String propertyId,
+    required String propertyName,
+    required int daysUntilDue,
+    required DateTime nextDueDate,
+    String? assignedTo,
+    String? caretakerId,
+  }) async {
+    final isOverdue = daysUntilDue < 0;
+    final isDueToday = daysUntilDue == 0;
+    final emoji = (isOverdue || isDueToday) ? '🔴' : '🟡';
+    final statusText = isOverdue
+        ? '⚠️ เกินกำหนด ${-daysUntilDue} วัน'
+        : isDueToday
+        ? '⏰ ถึงกำหนดวันนี้'
+        : '⏰ อีก $daysUntilDue วัน';
+    final dateStr =
+        '${nextDueDate.day}/${nextDueDate.month}/${nextDueDate.year}';
+
+    final title = '$emoji PM: $pmTitle';
+    final body = '🏠 บ้าน: $propertyName\n📅 กำหนด: $dateStr\n$statusText';
+
+    final recipientIds = <String>{};
+
+    // Assigned technician
+    if (assignedTo != null && assignedTo.isNotEmpty) {
+      recipientIds.add(assignedTo);
+    }
+
+    // Property manager (caretaker)
+    if (caretakerId != null && caretakerId.isNotEmpty) {
+      recipientIds.add(caretakerId);
+    }
+
+    // All admin/owner/manager users
+    final managers = await _getManagersAndAdmins();
+    for (final m in managers) {
+      recipientIds.add(m['id'] as String);
+    }
+
+    // Insert in-app notifications for all unique recipients
+    for (final userId in recipientIds) {
+      try {
+        await _client.from('notifications').insert({
+          'user_id': userId,
+          'title': title,
+          'body': body,
+          'type': 'pm',
+          'reference_id': pmId,
+        });
+      } catch (e) {
+        debugPrint('Insert PM notification error for $userId: $e');
+      }
+    }
   }
 
   // ─── Helpers ───────────────────────────────────────────

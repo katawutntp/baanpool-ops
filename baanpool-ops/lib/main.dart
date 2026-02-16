@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/router.dart';
 import 'app/theme.dart';
 import 'services/auth_state_service.dart';
+import 'services/line_notify_service.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
@@ -38,6 +39,23 @@ Future<void> main() async {
 
   // Initialize in-app notifications (load + realtime)
   await NotificationService().init();
+
+  // Re-initialize notifications when auth state changes (login/logout)
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    if (data.event == AuthChangeEvent.signedIn) {
+      NotificationService().reinit();
+      // Check PM schedules on login
+      LineNotifyService().checkAndNotifyPmDueSchedules();
+    } else if (data.event == AuthChangeEvent.signedOut) {
+      NotificationService().dispose2();
+    }
+  });
+
+  // Check PM schedules on app startup (if logged in)
+  if (Supabase.instance.client.auth.currentUser != null) {
+    // Run in background, don't block app startup
+    LineNotifyService().checkAndNotifyPmDueSchedules();
+  }
 
   runApp(const BaanPoolApp());
 }

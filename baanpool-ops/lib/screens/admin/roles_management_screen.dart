@@ -280,7 +280,7 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
       case UserRole.manager:
         return 'ผู้จัดการ เข้าถึงทุกส่วนได้';
       case UserRole.caretaker:
-        return 'ผู้ดูแลบ้าน เห็นเฉพาะบ้านที่ดูแล';
+        return 'ผู้จัดการ เข้าถึงทุกส่วนได้';
       case UserRole.technician:
         return 'เห็นเฉพาะงานที่ได้รับมอบหมาย';
     }

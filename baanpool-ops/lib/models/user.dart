@@ -60,12 +60,13 @@ enum UserRole {
       case UserRole.manager:
         return 'ผู้จัดการ';
       case UserRole.caretaker:
-        return 'ผู้ดูแลบ้าน';
+        return 'ผู้จัดการ';
       case UserRole.technician:
         return 'ช่าง';
     }
   }
 
   /// Returns true if this role has admin-level access
-  bool get isAdmin => this == admin || this == owner || this == manager;
+  bool get isAdmin =>
+      this == admin || this == owner || this == manager || this == caretaker;
 }
