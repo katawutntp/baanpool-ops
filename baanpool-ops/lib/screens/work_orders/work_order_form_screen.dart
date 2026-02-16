@@ -6,7 +6,22 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/supabase_service.dart';
 
 class WorkOrderFormScreen extends StatefulWidget {
-  const WorkOrderFormScreen({super.key});
+  final String? prefillTitle;
+  final String? prefillPropertyId;
+  final String? prefillTechnicianId;
+  final String? prefillDescription;
+  final String? prefillAssetId;
+  final String? prefillPriority;
+
+  const WorkOrderFormScreen({
+    super.key,
+    this.prefillTitle,
+    this.prefillPropertyId,
+    this.prefillTechnicianId,
+    this.prefillDescription,
+    this.prefillAssetId,
+    this.prefillPriority,
+  });
 
   @override
   State<WorkOrderFormScreen> createState() => _WorkOrderFormScreenState();
@@ -34,6 +49,22 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
   @override
   void initState() {
     super.initState();
+    // Pre-fill from PM schedule or other sources
+    if (widget.prefillTitle != null) {
+      _titleController.text = widget.prefillTitle!;
+    }
+    if (widget.prefillDescription != null) {
+      _descriptionController.text = widget.prefillDescription!;
+    }
+    if (widget.prefillPropertyId != null) {
+      _selectedPropertyId = widget.prefillPropertyId;
+    }
+    if (widget.prefillTechnicianId != null) {
+      _selectedTechnicianId = widget.prefillTechnicianId;
+    }
+    if (widget.prefillPriority != null) {
+      _priority = widget.prefillPriority!;
+    }
     _loadData();
   }
 
@@ -92,6 +123,7 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
             : _descriptionController.text.trim(),
         'assigned_to': _selectedTechnicianId,
         'status': 'open',
+        if (widget.prefillAssetId != null) 'asset_id': widget.prefillAssetId,
         if (photoUrls.isNotEmpty) 'photo_urls': photoUrls,
       };
 

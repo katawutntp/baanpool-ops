@@ -311,6 +311,25 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     }
   }
 
+  void _createWorkOrderFromPm(PmSchedule s) {
+    final dateStr = '${s.nextDueDate.day}/${s.nextDueDate.month}/${s.nextDueDate.year}';
+    final description = 'PM: ${s.title}\nกำหนด: $dateStr\nความถี่: ${s.frequency.displayName}'
+        '${s.description != null ? "\nรายละเอียด: ${s.description}" : ""}';
+
+    final queryParams = <String, String>{
+      'title': s.title,
+      'propertyId': s.propertyId,
+      'description': description,
+      'assetId': widget.assetId,
+    };
+    if (s.assignedTo != null) {
+      queryParams['technicianId'] = s.assignedTo!;
+    }
+
+    final uri = Uri(path: '/work-orders/new', queryParameters: queryParams);
+    context.push(uri.toString());
+  }
+
   Future<void> _deleteSchedule(PmSchedule s) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -517,6 +536,21 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                 ),
               ],
             ),
+            if (s.isDueSoon || daysUntilDue < 0) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _createWorkOrderFromPm(s),
+                  icon: const Icon(Icons.assignment_add, size: 18),
+                  label: const Text('สร้างใบงาน'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: statusColor,
+                    side: BorderSide(color: statusColor),
+                  ),
+                ),
+              ),
+            ],
             if (s.description != null) ...[
               const SizedBox(height: 4),
               Text(s.description!, style: theme.textTheme.bodySmall),

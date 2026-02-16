@@ -123,7 +123,17 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: 'new',
-              builder: (context, state) => const WorkOrderFormScreen(),
+              builder: (context, state) {
+                final q = state.uri.queryParameters;
+                return WorkOrderFormScreen(
+                  prefillTitle: q['title'],
+                  prefillPropertyId: q['propertyId'],
+                  prefillTechnicianId: q['technicianId'],
+                  prefillDescription: q['description'],
+                  prefillAssetId: q['assetId'],
+                  prefillPriority: q['priority'],
+                );
+              },
             ),
             GoRoute(
               path: ':id',
