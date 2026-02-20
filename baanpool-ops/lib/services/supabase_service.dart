@@ -45,6 +45,33 @@ class SupabaseService {
     await _client.from('properties').delete().eq('id', id);
   }
 
+  // ─── Property Categories ────────────────────────────────
+
+  /// Get all category display names
+  Future<Map<String, String>> getPropertyCategories() async {
+    try {
+      final data = await _client
+          .from('property_categories')
+          .select()
+          .order('prefix', ascending: true);
+      return {
+        for (final row in data)
+          row['prefix'] as String: row['display_name'] as String,
+      };
+    } catch (_) {
+      // Table might not exist yet
+      return {};
+    }
+  }
+
+  /// Upsert a category display name
+  Future<void> upsertPropertyCategory(String prefix, String displayName) async {
+    await _client.from('property_categories').upsert({
+      'prefix': prefix,
+      'display_name': displayName,
+    });
+  }
+
   // ─── Assets ────────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getAssets({String? propertyId}) async {

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/property.dart';
 import '../../services/supabase_service.dart';
+import '../../services/auth_state_service.dart';
 
 class PropertiesListScreen extends StatefulWidget {
   const PropertiesListScreen({super.key});
@@ -13,7 +14,9 @@ class PropertiesListScreen extends StatefulWidget {
 
 class _PropertiesListScreenState extends State<PropertiesListScreen> {
   final _service = SupabaseService(Supabase.instance.client);
+  final _authState = AuthStateService();
   List<Property> _properties = [];
+  Map<String, String> _categoryNames = {};
   bool _loading = true;
 
   @override
@@ -27,6 +30,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
     try {
       final data = await _service.getProperties();
       _properties = data.map((e) => Property.fromJson(e)).toList();
+      _categoryNames = await _service.getPropertyCategories();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -48,8 +52,12 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
     return 'อื่นๆ';
   }
 
-  /// Get a display name for the category
+  /// Get a display name for the category (from DB or fallback)
   String _getCategoryDisplayName(String prefix) {
+    // Use saved name from DB if available
+    final saved = _categoryNames[prefix.toUpperCase()];
+    if (saved != null && saved.isNotEmpty) return saved;
+    // Fallback defaults
     switch (prefix.toUpperCase()) {
       case 'BS-A':
         return 'BS-A (บ้านเดี่ยว A)';
@@ -63,6 +71,52 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
         return 'PT-BT (พูลวิลล่า)';
       default:
         return prefix;
+    }
+  }
+
+  /// Show dialog to edit category display name (admin only)
+  Future<void> _editCategoryName(String prefix) async {
+    final ctrl = TextEditingController(text: _getCategoryDisplayName(prefix));
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('แก้ไขชื่อหมวดหมู่'),
+        content: TextField(
+          controller: ctrl,
+          decoration: InputDecoration(
+            labelText: 'ชื่อหมวดหมู่',
+            hintText: prefix,
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('บันทึก'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+    try {
+      await _service.upsertPropertyCategory(prefix.toUpperCase(), result);
+      _categoryNames[prefix.toUpperCase()] = result;
+      setState(() {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('บันทึกชื่อหมวดหมู่สำเร็จ')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('บันทึกล้มเหลว: $e')));
+      }
     }
   }
 
@@ -130,32 +184,45 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
             padding: const EdgeInsets.only(top: 8, bottom: 8),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.villa,
-                        size: 16,
-                        color: theme.colorScheme.onPrimaryContainer,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${_getCategoryDisplayName(entry.key)} (${entry.value.length})',
-                        style: theme.textTheme.titleSmall?.copyWith(
+                GestureDetector(
+                  onTap: _authState.isAdmin
+                      ? () => _editCategoryName(entry.key)
+                      : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.villa,
+                          size: 16,
                           color: theme.colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_getCategoryDisplayName(entry.key)} (${entry.value.length})',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (_authState.isAdmin) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.edit,
+                            size: 14,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
                 const Expanded(child: Divider(indent: 8)),
