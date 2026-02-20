@@ -1,9 +1,12 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/asset.dart';
 import '../../models/pm_schedule.dart';
 import '../../services/supabase_service.dart';
+import '../../services/notification_service.dart';
 
 class AssetDetailScreen extends StatefulWidget {
   final String assetId;
@@ -18,6 +21,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   final _service = SupabaseService(Supabase.instance.client);
   Asset? _asset;
   List<PmSchedule> _schedules = [];
+  DateTime? _lastMaintenanceDate;
   bool _loading = true;
 
   @override
@@ -33,6 +37,9 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
       _asset = Asset.fromJson(aData);
       final sData = await _service.getPmSchedules(assetId: widget.assetId);
       _schedules = sData.map((e) => PmSchedule.fromJson(e)).toList();
+      _lastMaintenanceDate = await _service.getLastMaintenanceDate(
+        widget.assetId,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -86,72 +93,111 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     if (_asset == null) return;
     final a = _asset!;
     final nameCtrl = TextEditingController(text: a.name);
-    final categoryCtrl = TextEditingController(text: a.category ?? '');
-    final brandCtrl = TextEditingController(text: a.brand ?? '');
-    final modelCtrl = TextEditingController(text: a.model ?? '');
     final notesCtrl = TextEditingController(text: a.notes ?? '');
+    Uint8List? imageBytes;
+    String? imageName;
+    String? currentImageUrl = a.imageUrl;
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('แก้ไขอุปกรณ์'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'ชื่ออุปกรณ์ *'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: categoryCtrl,
-                decoration: const InputDecoration(labelText: 'ประเภท'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: brandCtrl,
-                decoration: const InputDecoration(labelText: 'ยี่ห้อ'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: modelCtrl,
-                decoration: const InputDecoration(labelText: 'รุ่น'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesCtrl,
-                decoration: const InputDecoration(labelText: 'หมายเหตุ'),
-                maxLines: 2,
-              ),
-            ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('แก้ไขอุปกรณ์'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'ชื่ออุปกรณ์ *'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(labelText: 'หมายเหตุ'),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                // Image picker
+                InkWell(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 1024,
+                      maxHeight: 1024,
+                      imageQuality: 80,
+                    );
+                    if (picked != null) {
+                      final bytes = await picked.readAsBytes();
+                      setDialogState(() {
+                        imageBytes = bytes;
+                        imageName = picked.name;
+                        currentImageUrl = null; // replaced by new image
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(ctx).colorScheme.outline,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: imageBytes != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(imageBytes!, fit: BoxFit.cover),
+                          )
+                        : currentImageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              currentImageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _imagePlaceholder(ctx),
+                            ),
+                          )
+                        : _imagePlaceholder(ctx),
+                  ),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ยกเลิก'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('บันทึก'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text('บันทึก'),
-          ),
-        ],
       ),
     );
     if (result != true) return;
     try {
+      // Upload new image if selected
+      String? imageUrl = a.imageUrl;
+      if (imageBytes != null) {
+        final ext = imageName?.split('.').last ?? 'jpg';
+        final path =
+            'assets/${a.propertyId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        imageUrl = await _service.uploadFile('asset-images', path, imageBytes!);
+      }
+
       await _service.updateAsset(widget.assetId, {
         'name': nameCtrl.text.trim(),
-        'category': categoryCtrl.text.trim().isEmpty
-            ? null
-            : categoryCtrl.text.trim(),
-        'brand': brandCtrl.text.trim().isEmpty ? null : brandCtrl.text.trim(),
-        'model': modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
         'notes': notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+        'image_url': imageUrl,
       });
       _load();
     } catch (e) {
@@ -161,6 +207,24 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
         ).showSnackBar(SnackBar(content: Text('แก้ไขล้มเหลว: $e')));
       }
     }
+  }
+
+  Widget _imagePlaceholder(BuildContext ctx) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.add_a_photo,
+          size: 40,
+          color: Theme.of(ctx).colorScheme.outline,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'เพิ่มรูปอุปกรณ์',
+          style: TextStyle(color: Theme.of(ctx).colorScheme.outline),
+        ),
+      ],
+    );
   }
 
   Future<void> _showAddScheduleDialog() async {
@@ -296,6 +360,16 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
         'next_due_date': nextDue.toIso8601String().split('T').first,
         'assigned_to': selectedTechId,
       });
+
+      // When no technician is assigned, notify the property manager (caretaker)
+      if (selectedTechId == null) {
+        await _notifyManagerForUnassignedPm(
+          pmTitle: titleCtrl.text.trim(),
+          nextDueDate: nextDue,
+          frequency: selectedFreq,
+        );
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('เพิ่ม PM Schedule สำเร็จ')),
@@ -308,6 +382,104 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
           SnackBar(content: Text('เพิ่ม PM Schedule ล้มเหลว: $e')),
         );
       }
+    }
+  }
+
+  /// Notify the property manager (caretaker) when PM is created without technician
+  Future<void> _notifyManagerForUnassignedPm({
+    required String pmTitle,
+    required DateTime nextDueDate,
+    required PmFrequency frequency,
+  }) async {
+    if (_asset == null) return;
+    final propertyId = _asset!.propertyId;
+    final assetName = _asset!.name;
+
+    try {
+      // Get property info for the name and caretaker
+      final propData = await _service.getProperty(propertyId);
+      final propertyName = propData['name'] as String? ?? 'ไม่ทราบ';
+      final caretakerId = propData['caretaker_id'] as String?;
+
+      final dateStr =
+          '${nextDueDate.day}/${nextDueDate.month}/${nextDueDate.year}';
+
+      // Collect recipient IDs (caretaker + admins/managers)
+      final recipientIds = <String>{};
+      if (caretakerId != null && caretakerId.isNotEmpty) {
+        recipientIds.add(caretakerId);
+      }
+
+      // Also notify admins/managers via LINE
+      final client = Supabase.instance.client;
+
+      // Get managers and admins
+      final managers = await client
+          .from('users')
+          .select('id, full_name, line_user_id, role')
+          .inFilter('role', ['admin', 'owner', 'manager']);
+      for (final m in managers) {
+        recipientIds.add(m['id'] as String);
+        // Send LINE notification
+        final lineUserId = m['line_user_id'] as String?;
+        if (lineUserId != null && lineUserId.isNotEmpty) {
+          await _service.sendLineNotification(
+            lineUserId: lineUserId,
+            message:
+                '📋 PM ใหม่ยังไม่มอบหมายช่าง\n'
+                '🔧 $pmTitle\n'
+                '🏠 บ้าน: $propertyName\n'
+                '⚙️ อุปกรณ์: $assetName\n'
+                '📅 กำหนด: $dateStr\n'
+                '🔄 ความถี่: ${frequency.displayName}\n'
+                '⚠️ กรุณามอบหมายช่างด้วย',
+          );
+        }
+      }
+
+      // Send LINE to caretaker
+      if (caretakerId != null && caretakerId.isNotEmpty) {
+        final caretaker = await client
+            .from('users')
+            .select('line_user_id')
+            .eq('id', caretakerId)
+            .maybeSingle();
+        if (caretaker != null) {
+          final lineUserId = caretaker['line_user_id'] as String?;
+          if (lineUserId != null && lineUserId.isNotEmpty) {
+            // Use the service's internal push via the public method
+            await _service.sendLineNotification(
+              lineUserId: lineUserId,
+              message:
+                  '📋 PM ใหม่ยังไม่มอบหมายช่าง\n'
+                  '🔧 $pmTitle\n'
+                  '🏠 บ้าน: $propertyName\n'
+                  '⚙️ อุปกรณ์: $assetName\n'
+                  '📅 กำหนด: $dateStr\n'
+                  '🔄 ความถี่: ${frequency.displayName}\n'
+                  '⚠️ กรุณามอบหมายช่างด้วย',
+            );
+          }
+        }
+      }
+
+      // Create in-app notifications for all recipients
+      for (final userId in recipientIds) {
+        try {
+          await client.from('notifications').insert({
+            'user_id': userId,
+            'title': '📋 PM ใหม่ยังไม่มอบหมายช่าง',
+            'body':
+                '🔧 $pmTitle\n🏠 บ้าน: $propertyName\n⚙️ อุปกรณ์: $assetName\n📅 กำหนด: $dateStr\n⚠️ กรุณามอบหมายช่างด้วย',
+            'type': 'pm',
+          });
+        } catch (_) {}
+      }
+
+      // Refresh notification service
+      await NotificationService().refresh();
+    } catch (e) {
+      debugPrint('Notify manager for unassigned PM error: $e');
     }
   }
 
@@ -400,6 +572,21 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Asset image
+            if (a.imageUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  a.imageUrl!,
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Asset info card
             Card(
               child: Padding(
@@ -409,12 +596,6 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                   children: [
                     Text('ข้อมูลอุปกรณ์', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 12),
-                    if (a.category != null)
-                      _infoRow(Icons.category, 'ประเภท', a.category!),
-                    if (a.brand != null)
-                      _infoRow(Icons.business, 'ยี่ห้อ', a.brand!),
-                    if (a.model != null)
-                      _infoRow(Icons.info_outline, 'รุ่น', a.model!),
                     if (a.installDate != null)
                       _infoRow(
                         Icons.calendar_today,
@@ -432,6 +613,14 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
                       ),
                     if (a.notes != null)
                       _infoRow(Icons.notes, 'หมายเหตุ', a.notes!),
+                    // Last maintenance date
+                    _infoRow(
+                      Icons.build_circle,
+                      'Maintenance ล่าสุด',
+                      _lastMaintenanceDate != null
+                          ? '${_lastMaintenanceDate!.day}/${_lastMaintenanceDate!.month}/${_lastMaintenanceDate!.year}'
+                          : 'ยังไม่เคย',
+                    ),
                   ],
                 ),
               ),

@@ -1,5 +1,7 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/property.dart';
 import '../../models/asset.dart';
@@ -18,6 +20,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   final _service = SupabaseService(Supabase.instance.client);
   Property? _property;
   List<Asset> _assets = [];
+  Map<String, DateTime?> _lastMaintenanceDates = {};
   bool _loading = true;
 
   @override
@@ -33,6 +36,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       final aData = await _service.getAssets(propertyId: widget.propertyId);
       _property = Property.fromJson(pData);
       _assets = aData.map((e) => Asset.fromJson(e)).toList();
+
+      // Load last maintenance dates for all assets
+      if (_assets.isNotEmpty) {
+        _lastMaintenanceDates = await _service.getLastMaintenanceDates(
+          _assets.map((a) => a.id).toList(),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -84,77 +94,117 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
   Future<void> _showAddAssetDialog() async {
     final nameCtrl = TextEditingController();
-    final categoryCtrl = TextEditingController();
-    final brandCtrl = TextEditingController();
-    final modelCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
+    Uint8List? imageBytes;
+    String? imageName;
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('เพิ่มอุปกรณ์'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'ชื่ออุปกรณ์ *'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: categoryCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'ประเภท',
-                  hintText: 'เช่น HVAC, ประปา, ไฟฟ้า',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('เพิ่มอุปกรณ์'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'ชื่ออุปกรณ์ *'),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: brandCtrl,
-                decoration: const InputDecoration(labelText: 'ยี่ห้อ'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: modelCtrl,
-                decoration: const InputDecoration(labelText: 'รุ่น'),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesCtrl,
-                decoration: const InputDecoration(labelText: 'หมายเหตุ'),
-                maxLines: 2,
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(labelText: 'หมายเหตุ'),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                // Image picker
+                InkWell(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 1024,
+                      maxHeight: 1024,
+                      imageQuality: 80,
+                    );
+                    if (picked != null) {
+                      final bytes = await picked.readAsBytes();
+                      setDialogState(() {
+                        imageBytes = bytes;
+                        imageName = picked.name;
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(ctx).colorScheme.outline,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: imageBytes != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(imageBytes!, fit: BoxFit.cover),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_a_photo,
+                                size: 40,
+                                color: Theme.of(ctx).colorScheme.outline,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'เพิ่มรูปอุปกรณ์',
+                                style: TextStyle(
+                                  color: Theme.of(ctx).colorScheme.outline,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ยกเลิก'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('เพิ่ม'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (nameCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text('เพิ่ม'),
-          ),
-        ],
       ),
     );
 
     if (result != true) return;
     try {
+      // Upload image if selected
+      String? imageUrl;
+      if (imageBytes != null) {
+        final ext = imageName?.split('.').last ?? 'jpg';
+        final path =
+            'assets/${widget.propertyId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        imageUrl = await _service.uploadFile('asset-images', path, imageBytes!);
+      }
+
       await _service.createAsset({
         'property_id': widget.propertyId,
         'name': nameCtrl.text.trim(),
-        'category': categoryCtrl.text.trim().isEmpty
-            ? null
-            : categoryCtrl.text.trim(),
-        'brand': brandCtrl.text.trim().isEmpty ? null : brandCtrl.text.trim(),
-        'model': modelCtrl.text.trim().isEmpty ? null : modelCtrl.text.trim(),
         'notes': notesCtrl.text.trim().isEmpty ? null : notesCtrl.text.trim(),
+        'image_url': imageUrl,
       });
       if (mounted) {
         ScaffoldMessenger.of(
@@ -222,20 +272,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   children: [
                     Text('ข้อมูลบ้าน', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 12),
-                    if (p.address != null)
-                      _infoRow(Icons.location_on, 'ที่อยู่', p.address!),
-                    if (p.ownerName != null)
-                      _infoRow(Icons.person, 'เจ้าของ', p.ownerName!),
-                    if (p.ownerContact != null)
-                      _infoRow(Icons.phone, 'เบอร์ติดต่อ', p.ownerContact!),
                     if (p.caretakerName != null)
                       _infoRow(
                         Icons.home_work,
                         'ผู้จัดการบ้าน',
                         p.caretakerName!,
                       ),
-                    if (p.notes != null)
-                      _infoRow(Icons.notes, 'หมายเหตุ', p.notes!),
                   ],
                 ),
               ),
@@ -279,27 +321,39 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 ),
               )
             else
-              ..._assets.map(
-                (a) => Card(
+              ..._assets.map((a) {
+                final lastMaint = _lastMaintenanceDates[a.id];
+                final lastMaintText = lastMaint != null
+                    ? '🔧 ล่าสุด: ${lastMaint.day}/${lastMaint.month}/${lastMaint.year}'
+                    : '🔧 ยังไม่เคย maintenance';
+                return Card(
                   child: ListTile(
-                    leading: CircleAvatar(
-                      child: Icon(_categoryIcon(a.category)),
-                    ),
+                    leading: a.imageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              a.imageUrl!,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  const CircleAvatar(child: Icon(Icons.build)),
+                            ),
+                          )
+                        : const CircleAvatar(child: Icon(Icons.build)),
                     title: Text(a.name),
                     subtitle: Text(
-                      [
-                        if (a.category != null) a.category!,
-                        if (a.brand != null) a.brand!,
-                      ].join(' • '),
+                      [if (a.notes != null) a.notes!, lastMaintText].join('\n'),
                     ),
+                    isThreeLine: true,
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       await context.push('/assets/${a.id}');
                       _load();
                     },
                   ),
-                ),
-              ),
+                );
+              }),
           ],
         ),
       ),
@@ -330,23 +384,5 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         ],
       ),
     );
-  }
-
-  IconData _categoryIcon(String? category) {
-    switch (category?.toLowerCase()) {
-      case 'hvac':
-        return Icons.ac_unit;
-      case 'ประปา':
-      case 'plumbing':
-        return Icons.water_drop;
-      case 'ไฟฟ้า':
-      case 'electrical':
-        return Icons.electrical_services;
-      case 'สระว่ายน้ำ':
-      case 'pool':
-        return Icons.pool;
-      default:
-        return Icons.build;
-    }
   }
 }

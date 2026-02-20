@@ -14,6 +14,7 @@ class AssetsListScreen extends StatefulWidget {
 class _AssetsListScreenState extends State<AssetsListScreen> {
   final _service = SupabaseService(Supabase.instance.client);
   List<Asset> _assets = [];
+  Map<String, DateTime?> _lastMaintenanceDates = {};
   bool _loading = true;
 
   @override
@@ -27,6 +28,13 @@ class _AssetsListScreenState extends State<AssetsListScreen> {
     try {
       final data = await _service.getAssets();
       _assets = data.map((e) => Asset.fromJson(e)).toList();
+
+      // Load last maintenance dates
+      if (_assets.isNotEmpty) {
+        _lastMaintenanceDates = await _service.getLastMaintenanceDates(
+          _assets.map((a) => a.id).toList(),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -70,18 +78,29 @@ class _AssetsListScreenState extends State<AssetsListScreen> {
                 itemCount: _assets.length,
                 itemBuilder: (context, index) {
                   final a = _assets[index];
+                  final lastMaint = _lastMaintenanceDates[a.id];
+                  final lastMaintText = lastMaint != null
+                      ? '🔧 ล่าสุด: ${lastMaint.day}/${lastMaint.month}/${lastMaint.year}'
+                      : '🔧 ยังไม่เคย maintenance';
                   return Card(
                     child: ListTile(
-                      leading: CircleAvatar(
-                        child: Icon(_categoryIcon(a.category)),
-                      ),
+                      leading: a.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                a.imageUrl!,
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    const CircleAvatar(
+                                      child: Icon(Icons.build),
+                                    ),
+                              ),
+                            )
+                          : const CircleAvatar(child: Icon(Icons.build)),
                       title: Text(a.name),
-                      subtitle: Text(
-                        [
-                          if (a.category != null) a.category!,
-                          if (a.brand != null) a.brand!,
-                        ].join(' • '),
-                      ),
+                      subtitle: Text(lastMaintText),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () async {
                         await context.push('/assets/${a.id}');
@@ -93,23 +112,5 @@ class _AssetsListScreenState extends State<AssetsListScreen> {
               ),
             ),
     );
-  }
-
-  IconData _categoryIcon(String? category) {
-    switch (category?.toLowerCase()) {
-      case 'hvac':
-        return Icons.ac_unit;
-      case 'ประปา':
-      case 'plumbing':
-        return Icons.water_drop;
-      case 'ไฟฟ้า':
-      case 'electrical':
-        return Icons.electrical_services;
-      case 'สระว่ายน้ำ':
-      case 'pool':
-        return Icons.pool;
-      default:
-        return Icons.build;
-    }
   }
 }

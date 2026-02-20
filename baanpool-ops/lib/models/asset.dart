@@ -9,6 +9,7 @@ class Asset {
   final DateTime? installDate;
   final DateTime? warrantyExpiry;
   final String? notes;
+  final String? imageUrl;
   final DateTime createdAt;
 
   const Asset({
@@ -21,6 +22,7 @@ class Asset {
     this.installDate,
     this.warrantyExpiry,
     this.notes,
+    this.imageUrl,
     required this.createdAt,
   });
 
@@ -39,6 +41,7 @@ class Asset {
           ? DateTime.parse(json['warranty_expiry'] as String)
           : null,
       notes: json['notes'] as String?,
+      imageUrl: json['image_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -52,6 +55,7 @@ class Asset {
     'install_date': installDate?.toIso8601String(),
     'warranty_expiry': warrantyExpiry?.toIso8601String(),
     'notes': notes,
+    'image_url': imageUrl,
   };
 
   bool get isWarrantyExpired =>

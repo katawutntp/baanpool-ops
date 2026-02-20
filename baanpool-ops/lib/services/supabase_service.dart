@@ -150,6 +150,49 @@ class SupabaseService {
     await _client.from('pm_schedules').delete().eq('id', id);
   }
 
+  /// Get the last maintenance (completed PM) date for an asset
+  Future<DateTime?> getLastMaintenanceDate(String assetId) async {
+    try {
+      final data = await _client
+          .from('pm_schedules')
+          .select('last_completed_date')
+          .eq('asset_id', assetId)
+          .not('last_completed_date', 'is', null)
+          .order('last_completed_date', ascending: false)
+          .limit(1);
+      if (data.isNotEmpty && data[0]['last_completed_date'] != null) {
+        return DateTime.parse(data[0]['last_completed_date'] as String);
+      }
+    } catch (_) {}
+
+    // Fallback: check work_orders completed for this asset
+    try {
+      final data = await _client
+          .from('work_orders')
+          .select('updated_at')
+          .eq('asset_id', assetId)
+          .eq('status', 'completed')
+          .order('updated_at', ascending: false)
+          .limit(1);
+      if (data.isNotEmpty && data[0]['updated_at'] != null) {
+        return DateTime.parse(data[0]['updated_at'] as String);
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  /// Get last maintenance dates for multiple assets (batch)
+  Future<Map<String, DateTime?>> getLastMaintenanceDates(
+    List<String> assetIds,
+  ) async {
+    final result = <String, DateTime?>{};
+    for (final id in assetIds) {
+      result[id] = await getLastMaintenanceDate(id);
+    }
+    return result;
+  }
+
   // ─── Storage ──────────────────────────────────────────
 
   Future<String> uploadFile(String bucket, String path, Uint8List bytes) async {

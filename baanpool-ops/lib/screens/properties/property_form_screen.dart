@@ -20,10 +20,6 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
   bool _loading = false;
 
   final _nameCtrl = TextEditingController();
-  final _addressCtrl = TextEditingController();
-  final _ownerNameCtrl = TextEditingController();
-  final _ownerContactCtrl = TextEditingController();
-  final _notesCtrl = TextEditingController();
 
   String? _selectedCaretakerId;
   List<Map<String, dynamic>> _caretakers = [];
@@ -40,10 +36,6 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _addressCtrl.dispose();
-    _ownerNameCtrl.dispose();
-    _ownerContactCtrl.dispose();
-    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -60,10 +52,6 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
     try {
       final data = await _service.getProperty(widget.propertyId!);
       _nameCtrl.text = data['name'] ?? '';
-      _addressCtrl.text = data['address'] ?? '';
-      _ownerNameCtrl.text = data['owner_name'] ?? '';
-      _ownerContactCtrl.text = data['owner_contact'] ?? '';
-      _notesCtrl.text = data['notes'] ?? '';
       _selectedCaretakerId = data['caretaker_id'] as String?;
     } catch (e) {
       if (mounted) {
@@ -81,16 +69,6 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
 
     final data = {
       'name': _nameCtrl.text.trim(),
-      'address': _addressCtrl.text.trim().isEmpty
-          ? null
-          : _addressCtrl.text.trim(),
-      'owner_name': _ownerNameCtrl.text.trim().isEmpty
-          ? null
-          : _ownerNameCtrl.text.trim(),
-      'owner_contact': _ownerContactCtrl.text.trim().isEmpty
-          ? null
-          : _ownerContactCtrl.text.trim(),
-      'notes': _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       'caretaker_id': _selectedCaretakerId,
     };
 
@@ -142,31 +120,6 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
                           : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _addressCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'ที่อยู่',
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _ownerNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'ชื่อเจ้าของ',
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _ownerContactCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'เบอร์ติดต่อเจ้าของ',
-                        prefixIcon: Icon(Icons.phone),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     // Caretaker dropdown
                     DropdownButtonFormField<String?>(
                       value: _selectedCaretakerId,
@@ -188,15 +141,6 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
                       ],
                       onChanged: (v) =>
                           setState(() => _selectedCaretakerId = v),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _notesCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'หมายเหตุ',
-                        prefixIcon: Icon(Icons.notes),
-                      ),
-                      maxLines: 3,
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
