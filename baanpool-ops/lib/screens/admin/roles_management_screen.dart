@@ -77,6 +77,102 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
     }
   }
 
+  void _showRenameDialog(AppUser user) {
+    final nameCtrl = TextEditingController(text: user.fullName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('เปลี่ยนชื่อ'),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(labelText: 'ชื่อ-นามสกุล'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newName = nameCtrl.text.trim();
+              if (newName.isEmpty) return;
+              Navigator.pop(context);
+              try {
+                await _svc.updateUser(user.id, {'full_name': newName});
+                await _loadUsers();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('เปลี่ยนชื่อเป็น $newName แล้ว'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('เปลี่ยนชื่อไม่สำเร็จ: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('บันทึก'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmDialog(AppUser user) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ลบผู้ใช้'),
+        content: Text(
+          'ต้องการลบ "${user.fullName}" ออกจากระบบหรือไม่?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await _svc.deleteUser(user.id);
+                await _loadUsers();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('ลบ ${user.fullName} แล้ว'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('ลบไม่สำเร็จ: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('ลบ'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showChangeRoleDialog(AppUser user) {
     showDialog(
       context: context,
@@ -414,10 +510,55 @@ class _RolesManagementScreenState extends State<RolesManagementScreen> {
                           ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _showChangeRoleDialog(user),
-                        tooltip: 'เปลี่ยน Role',
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'role':
+                              _showChangeRoleDialog(user);
+                              break;
+                            case 'rename':
+                              _showRenameDialog(user);
+                              break;
+                            case 'delete':
+                              if (!isCurrentUser) {
+                                _showDeleteConfirmDialog(user);
+                              }
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'role',
+                            child: ListTile(
+                              leading: Icon(Icons.swap_horiz),
+                              title: Text('เปลี่ยน Role'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'rename',
+                            child: ListTile(
+                              leading: Icon(Icons.edit),
+                              title: Text('เปลี่ยนชื่อ'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          if (!isCurrentUser)
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: Icon(Icons.delete, color: Colors.red),
+                                title: Text(
+                                  'ลบผู้ใช้',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                        ],
                       ),
                       isThreeLine: true,
                     ),

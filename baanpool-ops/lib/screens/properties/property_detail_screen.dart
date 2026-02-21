@@ -191,13 +191,22 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
     if (result != true) return;
     try {
-      // Upload image if selected
+      // Upload image if selected (graceful — asset is created even if upload fails)
       String? imageUrl;
       if (imageBytes != null) {
-        final ext = imageName?.split('.').last ?? 'jpg';
-        final path =
-            'assets/${widget.propertyId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
-        imageUrl = await _service.uploadFile('asset-images', path, imageBytes!);
+        try {
+          final ext = imageName?.split('.').last ?? 'jpg';
+          final path =
+              'assets/${widget.propertyId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+          imageUrl = await _service.uploadFile(
+            'asset-images',
+            path,
+            imageBytes!,
+          );
+        } catch (uploadErr) {
+          debugPrint('Image upload failed: $uploadErr');
+          // Continue without image
+        }
       }
 
       await _service.createAsset({
@@ -207,9 +216,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         'image_url': imageUrl,
       });
       if (mounted) {
+        final msg = imageBytes != null && imageUrl == null
+            ? 'เพิ่มอุปกรณ์สำเร็จ (อัปโหลดรูปไม่สำเร็จ — กรุณาสร้าง Storage bucket "asset-images" ใน Supabase)'
+            : 'เพิ่มอุปกรณ์สำเร็จ';
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('เพิ่มอุปกรณ์สำเร็จ')));
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
       _load();
     } catch (e) {

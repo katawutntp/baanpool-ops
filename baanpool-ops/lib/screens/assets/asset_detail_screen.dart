@@ -185,13 +185,22 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
     );
     if (result != true) return;
     try {
-      // Upload new image if selected
+      // Upload new image if selected (graceful — continue even if upload fails)
       String? imageUrl = a.imageUrl;
       if (imageBytes != null) {
-        final ext = imageName?.split('.').last ?? 'jpg';
-        final path =
-            'assets/${a.propertyId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
-        imageUrl = await _service.uploadFile('asset-images', path, imageBytes!);
+        try {
+          final ext = imageName?.split('.').last ?? 'jpg';
+          final path =
+              'assets/${a.propertyId}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+          imageUrl = await _service.uploadFile(
+            'asset-images',
+            path,
+            imageBytes!,
+          );
+        } catch (uploadErr) {
+          debugPrint('Image upload failed: $uploadErr');
+          // Keep existing imageUrl
+        }
       }
 
       await _service.updateAsset(widget.assetId, {

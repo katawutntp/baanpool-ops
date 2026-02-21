@@ -292,6 +292,11 @@ class SupabaseService {
     await _client.from('users').update(data).eq('id', userId);
   }
 
+  /// Delete a user from the users table
+  Future<void> deleteUser(String userId) async {
+    await _client.from('users').delete().eq('id', userId);
+  }
+
   /// Create a new user entry in the users table directly.
   /// The user can log in later via LINE or email signup.
   /// This avoids Supabase Auth signUp rate limiting (429).
