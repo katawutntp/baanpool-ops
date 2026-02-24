@@ -118,6 +118,10 @@ class SupabaseService {
     await _client.from('work_orders').update({'status': status}).eq('id', id);
   }
 
+  Future<void> updateWorkOrder(String id, Map<String, dynamic> data) async {
+    await _client.from('work_orders').update(data).eq('id', id);
+  }
+
   // ─── Expenses ─────────────────────────────────────────
 
   Future<List<Map<String, dynamic>>> getExpenses({

@@ -169,9 +169,17 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
 
   Widget _buildWorkOrderCard(WorkOrder wo, ThemeData theme) {
     final propertyName = _propertyNames[wo.propertyId] ?? '';
+    final isNew = wo.status == WorkOrderStatus.open;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: isNew ? Colors.red.shade50 : null,
+      shape: isNew
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.red.shade200, width: 1.5),
+            )
+          : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
@@ -185,11 +193,24 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
             children: [
               Row(
                 children: [
+                  // Red dot for new/open work orders
+                  if (isNew) ...[
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: Text(
                       wo.title,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: isNew ? Colors.red.shade800 : null,
                       ),
                     ),
                   ),
@@ -295,7 +316,7 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
   Color _statusColor(WorkOrderStatus status) {
     switch (status) {
       case WorkOrderStatus.open:
-        return Colors.blue;
+        return Colors.red;
       case WorkOrderStatus.inProgress:
         return Colors.orange;
       case WorkOrderStatus.completed:

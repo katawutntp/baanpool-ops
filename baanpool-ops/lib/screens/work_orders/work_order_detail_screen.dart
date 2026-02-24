@@ -1,6 +1,9 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/user.dart';
 import '../../models/work_order.dart';
 import '../../services/auth_state_service.dart';
 import '../../services/supabase_service.dart';
@@ -16,10 +19,16 @@ class WorkOrderDetailScreen extends StatefulWidget {
 
 class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
   final _service = SupabaseService(Supabase.instance.client);
+  final _authState = AuthStateService();
   WorkOrder? _workOrder;
   String? _propertyName;
   String? _technicianName;
   bool _loading = true;
+
+  // For completion photo
+  final ImagePicker _picker = ImagePicker();
+  final List<XFile> _completionImages = [];
+  final List<Uint8List> _completionImageBytes = [];
 
   @override
   void initState() {
@@ -121,6 +130,194 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
         ],
       ),
     );
+  }
+
+  /// Show dialog requiring photo before marking work order as completed
+  void _showCompletionDialog() {
+    // Reset completion images
+    _completionImages.clear();
+    _completionImageBytes.clear();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('ยืนยันทำเสร็จแล้ว'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'กรุณาแนบรูปถ่ายก่อนกดยืนยัน',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+
+                // Preview picked images
+                if (_completionImageBytes.isNotEmpty) ...[
+                  SizedBox(
+                    height: 100,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _completionImageBytes.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        return Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                _completionImageBytes[index],
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: GestureDetector(
+                                onTap: () {
+                                  setDialogState(() {
+                                    _completionImages.removeAt(index);
+                                    _completionImageBytes.removeAt(index);
+                                  });
+                                },
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                // Pick image button
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    try {
+                      final images =
+                          await _picker.pickMultiImage(imageQuality: 70);
+                      if (images.isEmpty) return;
+                      for (final img in images) {
+                        final bytes = await img.readAsBytes();
+                        setDialogState(() {
+                          _completionImages.add(img);
+                          _completionImageBytes.add(bytes);
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('เลือกรูปภาพล้มเหลว: $e'),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.camera_alt),
+                  label: Text(
+                    _completionImageBytes.isEmpty
+                        ? 'แนบรูปถ่าย *'
+                        : 'เพิ่มรูป (${_completionImageBytes.length})',
+                  ),
+                ),
+
+                if (_completionImageBytes.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      '* จำเป็นต้องแนบรูปถ่ายอย่างน้อย 1 รูป',
+                      style: TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('ยกเลิก'),
+            ),
+            FilledButton(
+              onPressed: _completionImageBytes.isEmpty
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      await _completeWithPhotos();
+                    },
+              child: const Text('ยืนยันเสร็จ'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Upload completion photos and mark as completed
+  Future<void> _completeWithPhotos() async {
+    try {
+      // Show loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('กำลังอัปโหลดรูปภาพ...')),
+        );
+      }
+
+      // Upload images
+      final photoUrls = <String>[..._workOrder?.photoUrls ?? []];
+      for (int i = 0; i < _completionImageBytes.length; i++) {
+        final bytes = _completionImageBytes[i];
+        final ext = _completionImages[i].name.split('.').last;
+        final path =
+            'work-orders/complete_${DateTime.now().millisecondsSinceEpoch}_$i.$ext';
+        try {
+          final url = await _service.uploadFile('photos', path, bytes);
+          photoUrls.add(url);
+        } catch (e) {
+          debugPrint('Upload completion image $i failed: $e');
+        }
+      }
+
+      // Update work order: status + photos
+      await _service.updateWorkOrder(widget.workOrderId, {
+        'status': 'completed',
+        'completed_at': DateTime.now().toIso8601String(),
+        'photo_urls': photoUrls,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('อัปเดตสถานะเสร็จสมบูรณ์'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('อัปเดตล้มเหลว: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -310,12 +507,15 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
             // Action buttons
             if (wo.status != WorkOrderStatus.completed &&
                 wo.status != WorkOrderStatus.cancelled) ...[
-              FilledButton.icon(
-                onPressed: _showStatusDialog,
-                icon: const Icon(Icons.edit),
-                label: const Text('เปลี่ยนสถานะ'),
-              ),
-              const SizedBox(height: 8),
+              // เปลี่ยนสถานะ — Admin only
+              if (_authState.currentRole == UserRole.admin)
+                FilledButton.icon(
+                  onPressed: _showStatusDialog,
+                  icon: const Icon(Icons.edit),
+                  label: const Text('เปลี่ยนสถานะ'),
+                ),
+              if (_authState.currentRole == UserRole.admin)
+                const SizedBox(height: 8),
               if (wo.status == WorkOrderStatus.open)
                 FilledButton.tonalIcon(
                   onPressed: () => _updateStatus('in_progress'),
@@ -324,7 +524,7 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                 ),
               if (wo.status == WorkOrderStatus.inProgress)
                 FilledButton.tonalIcon(
-                  onPressed: () => _updateStatus('completed'),
+                  onPressed: _showCompletionDialog,
                   icon: const Icon(Icons.check),
                   label: const Text('ทำเสร็จแล้ว'),
                 ),
