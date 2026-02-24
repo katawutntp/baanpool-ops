@@ -136,8 +136,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
 
       // Get property_id from the selected source
       String? propertyId;
-      if (_costType == ExpenseCostType.workOrder &&
-          _selectedWorkOrderId != null) {
+      if (_selectedWorkOrderId != null) {
         final selectedWO = _workOrders.firstWhere(
           (wo) => wo['id'] == _selectedWorkOrderId,
         );
@@ -151,9 +150,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       }
 
       await _service.createExpense({
-        if (_costType == ExpenseCostType.workOrder)
+        if (_selectedWorkOrderId != null)
           'work_order_id': _selectedWorkOrderId,
-        if (_costType == ExpenseCostType.pm)
+        if (_selectedPmScheduleId != null)
           'pm_schedule_id': _selectedPmScheduleId,
         'property_id': propertyId,
         'amount': double.parse(_amountController.text.trim()),

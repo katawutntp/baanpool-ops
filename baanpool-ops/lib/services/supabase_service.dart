@@ -181,6 +181,61 @@ class SupabaseService {
     await _client.from('pm_schedules').delete().eq('id', id);
   }
 
+  /// Complete PM schedules for an asset — update last_completed_date and advance next_due_date
+  Future<void> completePmSchedulesForAsset(String assetId) async {
+    try {
+      final schedules = await _client
+          .from('pm_schedules')
+          .select()
+          .eq('asset_id', assetId)
+          .eq('is_active', true);
+
+      final now = DateTime.now();
+      for (final s in schedules) {
+        final frequency = s['frequency'] as String? ?? 'monthly';
+        final nextDue = _calcNextDueDate(now, frequency);
+        await _client.from('pm_schedules').update({
+          'last_completed_date': now.toIso8601String(),
+          'next_due_date': nextDue.toIso8601String(),
+        }).eq('id', s['id'] as String);
+      }
+    } catch (_) {}
+  }
+
+  /// Calculate next due date based on PM frequency
+  DateTime _calcNextDueDate(DateTime from, String frequency) {
+    switch (frequency) {
+      case 'weekly':
+        return from.add(const Duration(days: 7));
+      case 'biweekly':
+        return from.add(const Duration(days: 14));
+      case 'monthly':
+        return DateTime(from.year, from.month + 1, from.day);
+      case 'quarterly':
+        return DateTime(from.year, from.month + 3, from.day);
+      case 'semiannual':
+        return DateTime(from.year, from.month + 6, from.day);
+      case 'annual':
+        return DateTime(from.year + 1, from.month, from.day);
+      default:
+        return DateTime(from.year, from.month + 1, from.day);
+    }
+  }
+
+  /// Find the PM schedule ID for an asset (first active schedule)
+  Future<String?> getPmScheduleIdForAsset(String assetId) async {
+    try {
+      final data = await _client
+          .from('pm_schedules')
+          .select('id')
+          .eq('asset_id', assetId)
+          .eq('is_active', true)
+          .limit(1);
+      if (data.isNotEmpty) return data[0]['id'] as String;
+    } catch (_) {}
+    return null;
+  }
+
   /// Get the last maintenance (completed PM) date for an asset
   Future<DateTime?> getLastMaintenanceDate(String assetId) async {
     try {
@@ -200,13 +255,14 @@ class SupabaseService {
     try {
       final data = await _client
           .from('work_orders')
-          .select('updated_at')
+          .select('completed_at')
           .eq('asset_id', assetId)
           .eq('status', 'completed')
-          .order('updated_at', ascending: false)
+          .not('completed_at', 'is', null)
+          .order('completed_at', ascending: false)
           .limit(1);
-      if (data.isNotEmpty && data[0]['updated_at'] != null) {
-        return DateTime.parse(data[0]['updated_at'] as String);
+      if (data.isNotEmpty && data[0]['completed_at'] != null) {
+        return DateTime.parse(data[0]['completed_at'] as String);
       }
     } catch (_) {}
 

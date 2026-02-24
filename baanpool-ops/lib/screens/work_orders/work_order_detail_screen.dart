@@ -81,7 +81,19 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
 
   Future<void> _updateStatus(String newStatus) async {
     try {
-      await _service.updateWorkOrderStatus(widget.workOrderId, newStatus);
+      if (newStatus == 'completed') {
+        // Also set completed_at when admin changes status to completed
+        await _service.updateWorkOrder(widget.workOrderId, {
+          'status': 'completed',
+          'completed_at': DateTime.now().toIso8601String(),
+        });
+        // Update PM schedule if linked to an asset
+        if (_workOrder?.assetId != null) {
+          await _service.completePmSchedulesForAsset(_workOrder!.assetId!);
+        }
+      } else {
+        await _service.updateWorkOrderStatus(widget.workOrderId, newStatus);
+      }
 
       // LINE notification is sent automatically via database trigger
 
@@ -312,6 +324,11 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
         'photo_urls': photoUrls,
       });
 
+      // Update PM schedule if this work order is linked to an asset
+      if (_workOrder?.assetId != null) {
+        await _service.completePmSchedulesForAsset(_workOrder!.assetId!);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -506,8 +523,18 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                 !_hasExpense &&
                 AuthStateService().currentRole.canManageExpenses) ...[
               FilledButton.icon(
-                onPressed: () =>
-                    context.push('/expenses/new?workOrderId=${wo.id}'),
+                onPressed: () async {
+                  var url = '/expenses/new?workOrderId=${wo.id}';
+                  // Auto-detect PM schedule for proper expense categorization
+                  if (wo.assetId != null) {
+                    final pmId = await _service
+                        .getPmScheduleIdForAsset(wo.assetId!);
+                    if (pmId != null) {
+                      url += '&pmScheduleId=$pmId';
+                    }
+                  }
+                  if (mounted) context.push(url);
+                },
                 icon: const Icon(Icons.receipt_long),
                 label: const Text('เพิ่มค่าใช้จ่าย'),
                 style: FilledButton.styleFrom(backgroundColor: Colors.green),
