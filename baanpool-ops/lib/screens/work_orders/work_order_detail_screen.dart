@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/work_order.dart';
+import '../../services/auth_state_service.dart';
 import '../../services/supabase_service.dart';
 
 class WorkOrderDetailScreen extends StatefulWidget {
@@ -183,9 +184,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                     if (_propertyName != null)
                       _infoRow(Icons.home, 'บ้าน', _propertyName!),
 
-                    // Technician
+                    // Responsible person
                     if (_technicianName != null)
-                      _infoRow(Icons.engineering, 'ช่าง', _technicianName!),
+                      _infoRow(Icons.person, 'รับผิดชอบโดย', _technicianName!),
 
                     // Priority
                     _infoRow(
@@ -293,8 +294,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
 
             const SizedBox(height: 24),
 
-            // Expense button for completed work orders
-            if (wo.status == WorkOrderStatus.completed) ...[
+            // Expense button for completed work orders (hidden for technicians)
+            if (wo.status == WorkOrderStatus.completed &&
+                AuthStateService().currentRole.canManageExpenses) ...[
               FilledButton.icon(
                 onPressed: () =>
                     context.push('/expenses/new?workOrderId=${wo.id}'),

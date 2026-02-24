@@ -90,6 +90,15 @@ class _ShellScreenState extends State<ShellScreen> {
           label: 'PM',
         ),
       );
+
+      items.add(
+        _NavItem(
+          path: '/contractors',
+          icon: Icons.contacts_outlined,
+          selectedIcon: Icons.contacts,
+          label: 'ช่างภายนอก',
+        ),
+      );
     }
 
     // Notifications — visible to everyone

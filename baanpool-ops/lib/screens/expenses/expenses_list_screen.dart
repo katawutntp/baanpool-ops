@@ -458,14 +458,43 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
                 style: theme.textTheme.bodyMedium,
               ),
               subtitle: Text(
-                '${_categoryLabel(e.category)} • ${e.expenseDate.day}/${e.expenseDate.month}/${e.expenseDate.year}',
+                '${_categoryLabel(e.category)} • ${e.expenseDate.day}/${e.expenseDate.month}/${e.expenseDate.year}'
+                ' • ${e.costType.displayName}'
+                ' • ${e.paidBy.displayName}',
                 style: theme.textTheme.bodySmall,
               ),
-              trailing: Text(
-                _formatAmount(e.amount),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+              trailing: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatAmount(e.amount),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: e.paidBy == ExpensePaidBy.company
+                          ? Colors.blue.withValues(alpha: 0.1)
+                          : Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      e.paidBy.displayName,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: e.paidBy == ExpensePaidBy.company
+                            ? Colors.blue
+                            : Colors.orange,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

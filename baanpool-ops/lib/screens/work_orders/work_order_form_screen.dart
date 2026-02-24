@@ -172,6 +172,23 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
     }
   }
 
+  String _getRoleLabel(String? role) {
+    switch (role) {
+      case 'admin':
+        return 'ผู้ดูแลระบบ';
+      case 'owner':
+        return 'เจ้าของ';
+      case 'manager':
+        return 'ผู้จัดการ';
+      case 'caretaker':
+        return 'ผู้ดูแลบ้าน';
+      case 'technician':
+        return 'ช่าง';
+      default:
+        return role ?? '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -221,8 +238,8 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                     DropdownButtonFormField<String?>(
                       value: _selectedTechnicianId,
                       decoration: const InputDecoration(
-                        labelText: 'มอบหมายช่าง',
-                        prefixIcon: Icon(Icons.engineering),
+                        labelText: 'รับผิดชอบโดย',
+                        prefixIcon: Icon(Icons.person),
                       ),
                       items: [
                         const DropdownMenuItem(
@@ -232,7 +249,9 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
                         ..._technicians.map(
                           (t) => DropdownMenuItem(
                             value: t['id'] as String,
-                            child: Text('${t['full_name']} (${t['role']})'),
+                            child: Text(
+                              '${t['full_name']} (${_getRoleLabel(t['role'] as String?)})',
+                            ),
                           ),
                         ),
                       ],

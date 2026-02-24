@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/expense.dart';
 import '../../services/supabase_service.dart';
 
 class ExpenseFormScreen extends StatefulWidget {
   final String? workOrderId;
+  final String? pmScheduleId;
 
-  const ExpenseFormScreen({super.key, this.workOrderId});
+  const ExpenseFormScreen({super.key, this.workOrderId, this.pmScheduleId});
 
   @override
   State<ExpenseFormScreen> createState() => _ExpenseFormScreenState();
@@ -20,11 +22,15 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   String _category = 'material';
+  ExpenseCostType _costType = ExpenseCostType.workOrder;
+  ExpensePaidBy _paidBy = ExpensePaidBy.company;
   bool _saving = false;
   bool _loading = true;
 
   String? _selectedWorkOrderId;
+  String? _selectedPmScheduleId;
   List<Map<String, dynamic>> _workOrders = [];
+  List<Map<String, dynamic>> _pmSchedules = [];
 
   // Receipt image
   final ImagePicker _picker = ImagePicker();
@@ -40,10 +46,20 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
-      _workOrders = await _service.getWorkOrders();
+      final results = await Future.wait([
+        _service.getWorkOrders(),
+        _service.getPmSchedules(),
+      ]);
+      _workOrders = results[0];
+      _pmSchedules = results[1];
       // Pre-select work order if passed via query param
       if (widget.workOrderId != null) {
         _selectedWorkOrderId = widget.workOrderId;
+        _costType = ExpenseCostType.workOrder;
+      }
+      if (widget.pmScheduleId != null) {
+        _selectedPmScheduleId = widget.pmScheduleId;
+        _costType = ExpenseCostType.pm;
       }
     } catch (e) {
       if (mounted) {
@@ -85,10 +101,19 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedWorkOrderId == null) {
+
+    // Validate that we have a reference (work order or PM)
+    if (_costType == ExpenseCostType.workOrder &&
+        _selectedWorkOrderId == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกใบงาน')));
+      return;
+    }
+    if (_costType == ExpenseCostType.pm && _selectedPmScheduleId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('กรุณาเลือกรายการ PM')));
       return;
     }
 
@@ -110,19 +135,35 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         }
       }
 
-      // Get property_id from the selected work order
-      final selectedWO = _workOrders.firstWhere(
-        (wo) => wo['id'] == _selectedWorkOrderId,
-      );
+      // Get property_id from the selected source
+      String? propertyId;
+      if (_costType == ExpenseCostType.workOrder &&
+          _selectedWorkOrderId != null) {
+        final selectedWO = _workOrders.firstWhere(
+          (wo) => wo['id'] == _selectedWorkOrderId,
+        );
+        propertyId = selectedWO['property_id'] as String?;
+      } else if (_costType == ExpenseCostType.pm &&
+          _selectedPmScheduleId != null) {
+        final selectedPM = _pmSchedules.firstWhere(
+          (pm) => pm['id'] == _selectedPmScheduleId,
+        );
+        propertyId = selectedPM['property_id'] as String?;
+      }
 
       await _service.createExpense({
-        'work_order_id': _selectedWorkOrderId,
-        'property_id': selectedWO['property_id'],
+        if (_costType == ExpenseCostType.workOrder)
+          'work_order_id': _selectedWorkOrderId,
+        if (_costType == ExpenseCostType.pm)
+          'pm_schedule_id': _selectedPmScheduleId,
+        'property_id': propertyId,
         'amount': double.parse(_amountController.text.trim()),
         'description': _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
         'category': _category,
+        'cost_type': _costType.value,
+        'paid_by': _paidBy.value,
         'expense_date': DateTime.now().toIso8601String().split('T').first,
         if (receiptUrl != null) 'receipt_url': receiptUrl,
       });
@@ -159,25 +200,98 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Work Order selection
-                    DropdownButtonFormField<String>(
-                      value: _selectedWorkOrderId,
+                    // Cost Type selector (Work Order vs PM)
+                    DropdownButtonFormField<ExpenseCostType>(
+                      value: _costType,
                       decoration: const InputDecoration(
-                        labelText: 'ใบงาน *',
-                        prefixIcon: Icon(Icons.assignment),
+                        labelText: 'ประเภทค่าใช้จ่าย *',
+                        prefixIcon: Icon(Icons.account_tree),
                       ),
-                      items: _workOrders.map((wo) {
+                      items: ExpenseCostType.values.map((t) {
                         return DropdownMenuItem(
-                          value: wo['id'] as String,
-                          child: Text(
-                            wo['title'] as String? ?? 'ไม่มีชื่อ',
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          value: t,
+                          child: Text(t.displayName),
                         );
                       }).toList(),
-                      onChanged: (v) =>
-                          setState(() => _selectedWorkOrderId = v),
-                      validator: (v) => v == null ? 'กรุณาเลือกใบงาน' : null,
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() {
+                            _costType = v;
+                            _selectedWorkOrderId = null;
+                            _selectedPmScheduleId = null;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Work Order selection (shown when cost_type = work_order)
+                    if (_costType == ExpenseCostType.workOrder)
+                      DropdownButtonFormField<String>(
+                        value: _selectedWorkOrderId,
+                        decoration: const InputDecoration(
+                          labelText: 'ใบงาน *',
+                          prefixIcon: Icon(Icons.assignment),
+                        ),
+                        items: _workOrders.map((wo) {
+                          return DropdownMenuItem(
+                            value: wo['id'] as String,
+                            child: Text(
+                              wo['title'] as String? ?? 'ไม่มีชื่อ',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedWorkOrderId = v),
+                        validator: (v) =>
+                            _costType == ExpenseCostType.workOrder && v == null
+                            ? 'กรุณาเลือกใบงาน'
+                            : null,
+                      ),
+
+                    // PM Schedule selection (shown when cost_type = pm)
+                    if (_costType == ExpenseCostType.pm)
+                      DropdownButtonFormField<String>(
+                        value: _selectedPmScheduleId,
+                        decoration: const InputDecoration(
+                          labelText: 'รายการ PM *',
+                          prefixIcon: Icon(Icons.schedule),
+                        ),
+                        items: _pmSchedules.map((pm) {
+                          return DropdownMenuItem(
+                            value: pm['id'] as String,
+                            child: Text(
+                              pm['title'] as String? ?? 'ไม่มีชื่อ',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedPmScheduleId = v),
+                        validator: (v) =>
+                            _costType == ExpenseCostType.pm && v == null
+                            ? 'กรุณาเลือกรายการ PM'
+                            : null,
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Paid By selector (Company vs Owner)
+                    DropdownButtonFormField<ExpensePaidBy>(
+                      value: _paidBy,
+                      decoration: const InputDecoration(
+                        labelText: 'รับผิดชอบโดย *',
+                        prefixIcon: Icon(Icons.business),
+                      ),
+                      items: ExpensePaidBy.values.map((p) {
+                        return DropdownMenuItem(
+                          value: p,
+                          child: Text(p.displayName),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _paidBy = v);
+                      },
                     ),
                     const SizedBox(height: 16),
 

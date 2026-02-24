@@ -18,6 +18,8 @@ import '../screens/expenses/expense_report_screen.dart';
 import '../screens/pm/pm_schedule_screen.dart';
 import '../screens/admin/roles_management_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
+import '../screens/contractors/contractors_list_screen.dart';
+import '../screens/contractors/contractor_detail_screen.dart';
 import '../screens/shell_screen.dart';
 import '../services/auth_state_service.dart';
 
@@ -153,6 +155,7 @@ final appRouter = GoRouter(
               path: 'new',
               builder: (context, state) => ExpenseFormScreen(
                 workOrderId: state.uri.queryParameters['workOrderId'],
+                pmScheduleId: state.uri.queryParameters['pmScheduleId'],
               ),
             ),
             GoRoute(
@@ -178,6 +181,20 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/notifications',
           builder: (context, state) => const NotificationsScreen(),
+        ),
+
+        // Contractors (ช่างภายนอก / ผู้รับเหมา)
+        GoRoute(
+          path: '/contractors',
+          builder: (context, state) => const ContractorsListScreen(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) => ContractorDetailScreen(
+                contractorId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
         ),
       ],
     ),

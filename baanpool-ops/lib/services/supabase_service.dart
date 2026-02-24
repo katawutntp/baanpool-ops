@@ -339,6 +339,59 @@ class SupabaseService {
     );
   }
 
+  // ─── Contractors (ช่างภายนอก) ────────────────────────
+
+  Future<List<Map<String, dynamic>>> getContractors({bool? activeOnly}) async {
+    var query = _client.from('contractors').select();
+    if (activeOnly == true) query = query.eq('is_active', true);
+    return await query.order('name', ascending: true);
+  }
+
+  Future<Map<String, dynamic>> getContractor(String id) async {
+    return await _client.from('contractors').select().eq('id', id).single();
+  }
+
+  Future<void> createContractor(Map<String, dynamic> data) async {
+    await _client.from('contractors').insert(data);
+  }
+
+  Future<void> updateContractor(String id, Map<String, dynamic> data) async {
+    await _client.from('contractors').update(data).eq('id', id);
+  }
+
+  Future<void> deleteContractor(String id) async {
+    await _client.from('contractors').delete().eq('id', id);
+  }
+
+  // ─── Contractor History (ประวัติช่างภายนอก) ─────────
+
+  Future<List<Map<String, dynamic>>> getContractorHistory(
+    String contractorId,
+  ) async {
+    return await _client
+        .from('contractor_history')
+        .select(
+          '*, work_orders:work_order_id(title), properties:property_id(name)',
+        )
+        .eq('contractor_id', contractorId)
+        .order('work_date', ascending: false);
+  }
+
+  Future<void> createContractorHistory(Map<String, dynamic> data) async {
+    await _client.from('contractor_history').insert(data);
+  }
+
+  Future<void> updateContractorHistory(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    await _client.from('contractor_history').update(data).eq('id', id);
+  }
+
+  Future<void> deleteContractorHistory(String id) async {
+    await _client.from('contractor_history').delete().eq('id', id);
+  }
+
   /// Notify assigned technician about a new work order via LINE
   Future<void> notifyWorkOrderAssigned({
     required String assignedToUserId,
