@@ -29,6 +29,7 @@ CREATE POLICY "Caretaker can view own property work orders"
 
 -- ─── 3. Allow caretakers to UPDATE work orders for their properties ─────
 DROP POLICY IF EXISTS "Admin or assigned tech can update work orders" ON public.work_orders;
+DROP POLICY IF EXISTS "Admin, caretaker or assigned tech can update work orders" ON public.work_orders;
 CREATE POLICY "Admin, caretaker or assigned tech can update work orders"
   ON public.work_orders FOR UPDATE
   TO authenticated
@@ -43,13 +44,12 @@ CREATE POLICY "Admin, caretaker or assigned tech can update work orders"
     )
   );
 
--- ─── 4. Allow caretakers to view expenses for their properties ─────
+-- ─── 4. Allow caretakers to view ALL expenses (same as admin/owner/manager) ─────
 DROP POLICY IF EXISTS "Caretaker can view own property expenses" ON public.expenses;
-CREATE POLICY "Caretaker can view own property expenses"
+DROP POLICY IF EXISTS "Admin/Owner/Manager see all expenses" ON public.expenses;
+CREATE POLICY "Admin/Owner/Manager see all expenses"
   ON public.expenses FOR SELECT
   TO authenticated
   USING (
-    property_id IN (
-      SELECT id FROM public.properties WHERE caretaker_id = auth.uid()
-    )
+    public.get_user_role() IN ('admin', 'owner', 'manager', 'caretaker')
   );
