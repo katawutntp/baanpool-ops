@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../models/user.dart';
+import '../../services/auth_state_service.dart';
 import '../../services/supabase_service.dart';
 
 class WorkOrderFormScreen extends StatefulWidget {
@@ -76,7 +78,16 @@ class _WorkOrderFormScreenState extends State<WorkOrderFormScreen> {
         _service.getUsers(), // Get all users for assignment
       ]);
       _properties = results[0];
-      _technicians = results[1];
+      // Caretaker role can only assign technicians
+      final allUsers = results[1] as List<Map<String, dynamic>>;
+      final currentRole = AuthStateService().currentRole;
+      if (currentRole == UserRole.caretaker) {
+        _technicians = allUsers
+            .where((u) => u['role'] == 'technician')
+            .toList();
+      } else {
+        _technicians = allUsers;
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

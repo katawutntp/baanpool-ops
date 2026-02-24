@@ -18,6 +18,7 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
   bool _loading = true;
   String? _filterStatus;
   Map<String, String> _propertyNames = {};
+  Set<String> _workOrderIdsWithExpense = {};
 
   @override
   void initState() {
@@ -28,12 +29,24 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final data = await _service.getWorkOrders(status: _filterStatus);
+      final results = await Future.wait([
+        _service.getWorkOrders(status: _filterStatus),
+        _service.getProperties(),
+        _service.getExpenses(),
+      ]);
+      final data = results[0] as List<Map<String, dynamic>>;
       _workOrders = data.map((e) => WorkOrder.fromJson(e)).toList();
 
-      final properties = await _service.getProperties();
+      final properties = results[1] as List<Map<String, dynamic>>;
       _propertyNames = {
         for (final p in properties) p['id'] as String: p['name'] as String,
+      };
+
+      // Build set of work order IDs that have expenses
+      final expenses = results[2] as List<Map<String, dynamic>>;
+      _workOrderIdsWithExpense = {
+        for (final e in expenses)
+          if (e['work_order_id'] != null) e['work_order_id'] as String,
       };
     } catch (e) {
       if (mounted) {
@@ -170,6 +183,7 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
   Widget _buildWorkOrderCard(WorkOrder wo, ThemeData theme) {
     final propertyName = _propertyNames[wo.propertyId] ?? '';
     final isNew = wo.status == WorkOrderStatus.open;
+    final hasExpense = _workOrderIdsWithExpense.contains(wo.id);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -248,7 +262,55 @@ class _WorkOrdersListScreenState extends State<WorkOrdersListScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _statusChip(wo.status),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _statusChip(wo.status),
+                      const SizedBox(width: 6),
+                      if (wo.status == WorkOrderStatus.completed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: hasExpense
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: hasExpense
+                                  ? Colors.green.withValues(alpha: 0.3)
+                                  : Colors.orange.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                hasExpense
+                                    ? Icons.receipt_long
+                                    : Icons.receipt_long_outlined,
+                                size: 12,
+                                color: hasExpense
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                hasExpense ? 'บันทึกแล้ว' : 'ยังไม่บันทึก',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: hasExpense
+                                      ? Colors.green
+                                      : Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                   Text(
                     '${wo.createdAt.day}/${wo.createdAt.month}/${wo.createdAt.year}',
                     style: theme.textTheme.bodySmall?.copyWith(

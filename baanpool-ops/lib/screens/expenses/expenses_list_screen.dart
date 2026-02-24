@@ -24,6 +24,7 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
   // Data
   List<Expense> _allExpenses = [];
   List<Map<String, dynamic>> _properties = [];
+  List<Map<String, dynamic>> _workOrders = [];
 
   // Computed report data
   final Map<String, List<Expense>> _expensesByProperty = {};
@@ -45,12 +46,14 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
       final results = await Future.wait([
         _service.getExpenses(),
         _service.getProperties(),
+        _service.getWorkOrders(),
       ]);
 
       _allExpenses = (results[0] as List<Map<String, dynamic>>)
           .map((e) => Expense.fromJson(e))
           .toList();
       _properties = results[1] as List<Map<String, dynamic>>;
+      _workOrders = results[2] as List<Map<String, dynamic>>;
 
       _computeReport();
     } catch (e) {
@@ -167,28 +170,44 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
     }
 
     final monthLabel = '${_monthName(_selectedMonth)} $_selectedYear';
+
+    // Build work order name map for references
+    final woNames = <String, String>{};
+    for (final wo in _workOrders) {
+      woNames[wo['id'] as String] = wo['title'] as String? ?? '';
+    }
+
     final buf = StringBuffer();
 
     // CSV Header
     buf.writeln('รายงานค่าใช้จ่ายรายเดือน - $monthLabel');
     buf.writeln('');
-    buf.writeln('บ้าน,รายการ,ประเภท,วันที่,จำนวนเงิน (บาท)');
+    buf.writeln(
+      'บ้าน,รายการ,ประเภท,ประเภทค่าใช้จ่าย,รับผิดชอบโดย,อ้างอิง,วันที่,จำนวนเงิน (บาท)',
+    );
 
     for (final entry in _expensesByProperty.entries) {
       final propName = _getPropertyName(entry.key);
       for (final e in entry.value) {
         final desc = e.description ?? _categoryLabel(e.category);
         final cat = _categoryLabel(e.category);
+        final costTypeLabel = e.costType.displayName;
+        final paidByLabel = e.paidBy.displayName;
+        final ref = e.workOrderId != null
+            ? (woNames[e.workOrderId] ?? e.workOrderId ?? '')
+            : (e.pmScheduleId ?? '');
         final date =
             '${e.expenseDate.day}/${e.expenseDate.month}/${e.expenseDate.year}';
         buf.writeln(
-          '"$propName","$desc","$cat","$date",${e.amount.toStringAsFixed(2)}',
+          '"$propName","$desc","$cat","$costTypeLabel","$paidByLabel","$ref","$date",${e.amount.toStringAsFixed(2)}',
         );
       }
     }
 
     buf.writeln('');
-    buf.writeln('"รวมทั้งเดือน","","","",${_grandTotal.toStringAsFixed(2)}');
+    buf.writeln(
+      '"รวมทั้งเดือน","","","","","","",${_grandTotal.toStringAsFixed(2)}',
+    );
 
     // Summary by property
     buf.writeln('');
@@ -199,6 +218,25 @@ class _ExpensesListScreenState extends State<ExpensesListScreen> {
       final total = _totalByProperty[entry.key] ?? 0;
       buf.writeln(
         '"$propName",${entry.value.length},${total.toStringAsFixed(2)}',
+      );
+    }
+
+    // Summary by paid_by
+    buf.writeln('');
+    buf.writeln('สรุปตามผู้รับผิดชอบ');
+    buf.writeln('รับผิดชอบโดย,จำนวนรายการ,รวมเงิน (บาท)');
+    final filtered = _allExpenses.where((e) {
+      return e.expenseDate.year == _selectedYear &&
+          e.expenseDate.month == _selectedMonth;
+    }).toList();
+    final paidByGroups = <String, List<Expense>>{};
+    for (final e in filtered) {
+      paidByGroups.putIfAbsent(e.paidBy.displayName, () => []).add(e);
+    }
+    for (final entry in paidByGroups.entries) {
+      final total = entry.value.fold<double>(0, (s, e) => s + e.amount);
+      buf.writeln(
+        '"${entry.key}",${entry.value.length},${total.toStringAsFixed(2)}',
       );
     }
 

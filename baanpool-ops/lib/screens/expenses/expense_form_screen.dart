@@ -201,9 +201,12 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                     // Cost Type selector (Work Order vs PM)
                     DropdownButtonFormField<ExpenseCostType>(
                       value: _costType,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'ประเภทค่าใช้จ่าย *',
-                        prefixIcon: Icon(Icons.account_tree),
+                        prefixIcon: const Icon(Icons.account_tree),
+                        filled:
+                            widget.workOrderId != null ||
+                            widget.pmScheduleId != null,
                       ),
                       items: ExpenseCostType.values.map((t) {
                         return DropdownMenuItem(
@@ -211,15 +214,19 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                           child: Text(t.displayName),
                         );
                       }).toList(),
-                      onChanged: (v) {
-                        if (v != null) {
-                          setState(() {
-                            _costType = v;
-                            _selectedWorkOrderId = null;
-                            _selectedPmScheduleId = null;
-                          });
-                        }
-                      },
+                      onChanged:
+                          (widget.workOrderId != null ||
+                              widget.pmScheduleId != null)
+                          ? null
+                          : (v) {
+                              if (v != null) {
+                                setState(() {
+                                  _costType = v;
+                                  _selectedWorkOrderId = null;
+                                  _selectedPmScheduleId = null;
+                                });
+                              }
+                            },
                     ),
                     const SizedBox(height: 16),
 
@@ -227,9 +234,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                     if (_costType == ExpenseCostType.workOrder)
                       DropdownButtonFormField<String>(
                         value: _selectedWorkOrderId,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'ใบงาน *',
-                          prefixIcon: Icon(Icons.assignment),
+                          prefixIcon: const Icon(Icons.assignment),
+                          filled: widget.workOrderId != null,
                         ),
                         items: _workOrders.map((wo) {
                           return DropdownMenuItem(
@@ -240,8 +248,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (v) =>
-                            setState(() => _selectedWorkOrderId = v),
+                        onChanged: widget.workOrderId != null
+                            ? null
+                            : (v) => setState(() => _selectedWorkOrderId = v),
                         validator: (v) =>
                             _costType == ExpenseCostType.workOrder && v == null
                             ? 'กรุณาเลือกใบงาน'
@@ -252,9 +261,10 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                     if (_costType == ExpenseCostType.pm)
                       DropdownButtonFormField<String>(
                         value: _selectedPmScheduleId,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'รายการ PM *',
-                          prefixIcon: Icon(Icons.schedule),
+                          prefixIcon: const Icon(Icons.schedule),
+                          filled: widget.pmScheduleId != null,
                         ),
                         items: _pmSchedules.map((pm) {
                           return DropdownMenuItem(
@@ -265,8 +275,9 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (v) =>
-                            setState(() => _selectedPmScheduleId = v),
+                        onChanged: widget.pmScheduleId != null
+                            ? null
+                            : (v) => setState(() => _selectedPmScheduleId = v),
                         validator: (v) =>
                             _costType == ExpenseCostType.pm && v == null
                             ? 'กรุณาเลือกรายการ PM'

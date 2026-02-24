@@ -182,6 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
+                        color: status == 'open' ? Colors.red.shade50 : null,
                         child: ListTile(
                           leading: Icon(
                             _statusIcon(status),
@@ -191,9 +192,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            style: status == 'open'
+                                ? TextStyle(
+                                    color: Colors.red.shade800,
+                                    fontWeight: FontWeight.bold,
+                                  )
+                                : null,
                           ),
                           subtitle: Text(propertyName),
-                          trailing: _priorityDot(priority),
+                          trailing: status == 'open'
+                              ? Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              : _priorityDot(priority),
                           onTap: () async {
                             await context.push('/work-orders/$id');
                             _load();
@@ -225,7 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'open':
-        return Colors.blue;
+        return Colors.red;
       case 'in_progress':
         return Colors.orange;
       case 'completed':
