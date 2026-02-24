@@ -21,7 +21,6 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
   final _service = SupabaseService(Supabase.instance.client);
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
-  String _category = 'material';
   ExpenseCostType _costType = ExpenseCostType.workOrder;
   ExpensePaidBy _paidBy = ExpensePaidBy.company;
   bool _saving = false;
@@ -161,7 +160,6 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
         'description': _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
-        'category': _category,
         'cost_type': _costType.value,
         'paid_by': _paidBy.value,
         'expense_date': DateTime.now().toIso8601String().split('T').first,
@@ -308,31 +306,6 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
                         if (double.tryParse(v) == null)
                           return 'กรุณากรอกตัวเลข';
                         return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Category
-                    DropdownButtonFormField<String>(
-                      value: _category,
-                      decoration: const InputDecoration(
-                        labelText: 'ประเภท',
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'material',
-                          child: Text('วัสดุ'),
-                        ),
-                        DropdownMenuItem(value: 'labor', child: Text('ค่าแรง')),
-                        DropdownMenuItem(
-                          value: 'contractor',
-                          child: Text('ผู้รับเหมา'),
-                        ),
-                        DropdownMenuItem(value: 'other', child: Text('อื่น ๆ')),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) setState(() => _category = v);
                       },
                     ),
                     const SizedBox(height: 16),

@@ -24,6 +24,7 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
   String? _propertyName;
   String? _technicianName;
   bool _loading = true;
+  bool _hasExpense = false;
 
   // For completion photo
   final ImagePicker _picker = ImagePicker();
@@ -56,6 +57,16 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
             final user = await _service.getUser(_workOrder!.assignedTo!);
             _technicianName = user?['full_name'] as String?;
           } catch (_) {}
+        }
+
+        // Check if expense already exists for this work order
+        try {
+          final expenses = await _service.getExpenses(
+            workOrderId: widget.workOrderId,
+          );
+          _hasExpense = expenses.isNotEmpty;
+        } catch (_) {
+          _hasExpense = false;
         }
       }
     } catch (e) {
@@ -211,8 +222,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                 OutlinedButton.icon(
                   onPressed: () async {
                     try {
-                      final images =
-                          await _picker.pickMultiImage(imageQuality: 70);
+                      final images = await _picker.pickMultiImage(
+                        imageQuality: 70,
+                      );
                       if (images.isEmpty) return;
                       for (final img in images) {
                         final bytes = await img.readAsBytes();
@@ -224,9 +236,7 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('เลือกรูปภาพล้มเหลว: $e'),
-                          ),
+                          SnackBar(content: Text('เลือกรูปภาพล้มเหลว: $e')),
                         );
                       }
                     }
@@ -275,9 +285,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
     try {
       // Show loading
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('กำลังอัปโหลดรูปภาพ...')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('กำลังอัปโหลดรูปภาพ...')));
       }
 
       // Upload images
@@ -313,9 +323,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
       _load();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('อัปเดตล้มเหลว: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('อัปเดตล้มเหลว: $e')));
       }
     }
   }
@@ -491,8 +501,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
 
             const SizedBox(height: 24),
 
-            // Expense button for completed work orders (hidden for technicians)
+            // Expense button for completed work orders (hidden for technicians, hidden if expense already exists)
             if (wo.status == WorkOrderStatus.completed &&
+                !_hasExpense &&
                 AuthStateService().currentRole.canManageExpenses) ...[
               FilledButton.icon(
                 onPressed: () =>
