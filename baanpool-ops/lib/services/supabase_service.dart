@@ -194,10 +194,13 @@ class SupabaseService {
       for (final s in schedules) {
         final frequency = s['frequency'] as String? ?? 'monthly';
         final nextDue = _calcNextDueDate(now, frequency);
-        await _client.from('pm_schedules').update({
-          'last_completed_date': now.toIso8601String(),
-          'next_due_date': nextDue.toIso8601String(),
-        }).eq('id', s['id'] as String);
+        await _client
+            .from('pm_schedules')
+            .update({
+              'last_completed_date': now.toIso8601String(),
+              'next_due_date': nextDue.toIso8601String(),
+            })
+            .eq('id', s['id'] as String);
       }
     } catch (_) {}
   }
@@ -470,7 +473,7 @@ class SupabaseService {
             '📢 คุณได้รับมอบหมายงานใหม่!\n'
             '📝 $workOrderTitle\n'
             '🏠 บ้าน: $propertyName\n'
-            'เข้าไปดูรายละเอียดได้ที่แอป BaanPool Ops',
+            'เข้าไปดูรายละเอียดได้ที่แอป ChangYai',
       );
     } catch (_) {
       // Silent fail — notification is optional

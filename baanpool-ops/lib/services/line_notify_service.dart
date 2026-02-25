@@ -254,7 +254,7 @@ class LineNotifyService {
         '🏠 บ้าน: $propertyName\n'
         '📊 สถานะ: $statusText\n'
         '${technicianName != null ? "👷 ช่าง: $technicianName\n" : ""}'
-        'เข้าไปดูรายละเอียดที่แอป BaanPool Ops';
+        'เข้าไปดูรายละเอียดที่แอป ChangYai';
 
     final recipients = <String>{};
 
@@ -545,7 +545,7 @@ class LineNotifyService {
         'contents': [
           {
             'type': 'text',
-            'text': 'เข้าดูรายละเอียดที่แอป BaanPool Ops',
+            'text': 'เข้าดูรายละเอียดที่แอป ChangYai',
             'size': 'xs',
             'color': '#AAAAAA',
             'align': 'center',

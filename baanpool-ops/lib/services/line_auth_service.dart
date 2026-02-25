@@ -27,7 +27,7 @@ class LineAuthService {
       }
       return '${uri.scheme}://${uri.host}:${uri.port}/auth/callback';
     }
-    return 'com.baanpool.ops://login-callback';
+    return 'com.changyai.app://login-callback';
   }
 
   /// Open LINE Login page
@@ -42,7 +42,7 @@ class LineAuthService {
       'state': state,
       'scope': 'profile openid email',
       'nonce': nonce,
-      // Force user to add the BaanPool Ops LINE bot as friend
+      // Force user to add the ChangYai LINE bot as friend
       'bot_prompt': 'aggressive',
     });
 
@@ -87,7 +87,7 @@ class LineAuthService {
     final pictureUrl = profile['pictureUrl'] as String?;
 
     // 3) Sign in or sign up in Supabase using LINE userId as identifier
-    final email = 'line_$lineUserId@baanpool-ops.app';
+    final email = 'line_$lineUserId@changyai.app';
     final password = 'line_${lineUserId}_${_channelSecret.substring(0, 8)}';
 
     try {

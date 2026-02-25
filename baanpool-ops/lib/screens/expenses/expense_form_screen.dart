@@ -150,8 +150,7 @@ class _ExpenseFormScreenState extends State<ExpenseFormScreen> {
       }
 
       await _service.createExpense({
-        if (_selectedWorkOrderId != null)
-          'work_order_id': _selectedWorkOrderId,
+        if (_selectedWorkOrderId != null) 'work_order_id': _selectedWorkOrderId,
         if (_selectedPmScheduleId != null)
           'pm_schedule_id': _selectedPmScheduleId,
         'property_id': propertyId,

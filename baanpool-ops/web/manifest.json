@@ -1,11 +1,11 @@
 {
-    "name": "BaanPool Ops",
-    "short_name": "BaanPool Ops",
+    "name": "ChangYai",
+    "short_name": "ChangYai",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#f36734",
     "theme_color": "#f36734",
-    "description": "ระบบบริหารจัดการบ้านพูล BaanPool",
+    "description": "ระบบบริหารจัดการบ้านพูล ChangYai",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

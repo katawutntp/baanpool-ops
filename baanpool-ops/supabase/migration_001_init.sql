@@ -1,5 +1,5 @@
 -- =====================================================
--- BaanPool Ops — Supabase Database Migration
+-- ChangYai — Supabase Database Migration
 -- Run this SQL in Supabase SQL Editor (Dashboard > SQL)
 -- =====================================================
 

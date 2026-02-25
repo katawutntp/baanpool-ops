@@ -60,7 +60,7 @@ serve(async (req) => {
     });
 
     // Use LINE userId as a unique identifier
-    const email = `line_${profile.userId}@baanpool-ops.app`;
+    const email = `line_${profile.userId}@changyai.app`;
     const password = `line_${profile.userId}_${LINE_CHANNEL_SECRET.substring(0, 8)}`;
 
     // Try to sign in first

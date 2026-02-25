@@ -57,19 +57,19 @@ Future<void> main() async {
     LineNotifyService().checkAndNotifyPmDueSchedules();
   }
 
-  runApp(const BaanPoolApp());
+  runApp(const ChangYaiApp());
 }
 
 /// Global Supabase client accessor
 final supabase = Supabase.instance.client;
 
-class BaanPoolApp extends StatelessWidget {
-  const BaanPoolApp({super.key});
+class ChangYaiApp extends StatelessWidget {
+  const ChangYaiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'BaanPool Ops',
+      title: 'ChangYai',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

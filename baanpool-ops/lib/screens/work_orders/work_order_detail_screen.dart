@@ -527,8 +527,9 @@ class _WorkOrderDetailScreenState extends State<WorkOrderDetailScreen> {
                   var url = '/expenses/new?workOrderId=${wo.id}';
                   // Auto-detect PM schedule for proper expense categorization
                   if (wo.assetId != null) {
-                    final pmId = await _service
-                        .getPmScheduleIdForAsset(wo.assetId!);
+                    final pmId = await _service.getPmScheduleIdForAsset(
+                      wo.assetId!,
+                    );
                     if (pmId != null) {
                       url += '&pmScheduleId=$pmId';
                     }

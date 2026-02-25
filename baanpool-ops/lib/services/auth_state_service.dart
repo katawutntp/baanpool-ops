@@ -64,7 +64,7 @@ class AuthStateService extends ChangeNotifier {
         // User exists in auth but not in users table — create a default entry
         final newUser = {
           'id': authUser.id,
-          'email': authUser.email ?? 'unknown@baanpool.ops',
+          'email': authUser.email ?? 'unknown@changyai.app',
           'full_name':
               authUser.userMetadata?['full_name'] ?? authUser.email ?? 'User',
           'role': 'technician',

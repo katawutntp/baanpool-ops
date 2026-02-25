@@ -1,5 +1,5 @@
 -- =====================================================
--- BaanPool Ops — Migration 002: Add Admin Role + Seed Admin User
+-- ChangYai — Migration 002: Add Admin Role + Seed Admin User
 -- Run this SQL in Supabase SQL Editor (Dashboard > SQL)
 -- =====================================================
 
@@ -97,4 +97,4 @@ CREATE POLICY "Admin can insert users"
 -- ─── 5. HOW TO CREATE FIRST ADMIN ─────────────────────
 -- The app auto-creates admin for the first user who signs up.
 -- If you need to manually set admin, run:
--- UPDATE public.users SET role = 'admin' WHERE email = 'admin@baanpool.ops';
+-- UPDATE public.users SET role = 'admin' WHERE email = 'admin@changyai.app';
