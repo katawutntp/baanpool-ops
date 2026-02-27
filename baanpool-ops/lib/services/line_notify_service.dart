@@ -252,9 +252,7 @@ class LineNotifyService {
         '$emoji ใบงานอัปเดตสถานะ\n'
         '📝 $workOrderTitle\n'
         '🏠 บ้าน: $propertyName\n'
-        '📊 สถานะ: $statusText\n'
-        '${technicianName != null ? "👷 ช่าง: $technicianName\n" : ""}'
-        'เข้าไปดูรายละเอียดที่แอป ChangYai';
+        '📊 สถานะ: $statusText';
 
     final recipients = <String>{};
 
@@ -441,6 +439,88 @@ class LineNotifyService {
         debugPrint('Insert PM notification error for $userId: $e');
       }
     }
+  }
+
+  // ─── 6. Expense reminder: completed work orders without expenses ──
+
+  /// Check for completed work orders that have no expense records.
+  /// Sends a LINE notification to managers/admins/caretakers reminding them.
+  /// Intended to be called daily at 17:00 or from the dashboard.
+  /// Returns count of reminders sent.
+  Future<int> checkAndNotifyMissingExpenses() async {
+    if (!_enabled) return 0;
+
+    int sent = 0;
+    try {
+      // Get all completed work orders
+      final completedWos = await _client
+          .from('work_orders')
+          .select('id, title, property_id')
+          .eq('status', 'completed');
+
+      if (completedWos.isEmpty) return 0;
+
+      // Get all expense records grouped by work_order_id
+      final expenses = await _client
+          .from('expenses')
+          .select('work_order_id')
+          .not('work_order_id', 'is', null);
+
+      final woIdsWithExpenses = <String>{
+        for (final e in expenses)
+          if (e['work_order_id'] != null) e['work_order_id'] as String,
+      };
+
+      // Filter completed work orders that have NO expenses
+      final missingExpenseWos = completedWos
+          .where((wo) => !woIdsWithExpenses.contains(wo['id'] as String))
+          .toList();
+
+      if (missingExpenseWos.isEmpty) return 0;
+
+      // Load property names
+      final properties = await _client.from('properties').select('id, name');
+      final propNames = <String, String>{
+        for (final p in properties) p['id'] as String: p['name'] as String,
+      };
+
+      // Collect all manager/admin LINE IDs
+      final managers = await _getManagersAndAdmins();
+      final managerLineIds = <String>{};
+      for (final m in managers) {
+        final lid = m['line_user_id'] as String?;
+        if (lid != null && lid.isNotEmpty) managerLineIds.add(lid);
+      }
+
+      // Send one notification per missing-expense work order
+      for (final wo in missingExpenseWos) {
+        final woTitle = wo['title'] as String;
+        final propertyId = wo['property_id'] as String;
+        final propertyName = propNames[propertyId] ?? '-';
+
+        final message =
+            '⚠️ แจ้งเตือนยังไม่บันทึกค่าใช้จ่าย\n'
+            '📝 $woTitle\n'
+            '🏠 บ้าน: $propertyName';
+
+        // Collect recipients: caretaker of property + managers/admins
+        final recipients = <String>{...managerLineIds};
+
+        final caretaker = await _getPropertyCaretaker(propertyId);
+        if (caretaker != null) {
+          final lid = caretaker['line_user_id'] as String?;
+          if (lid != null && lid.isNotEmpty) recipients.add(lid);
+        }
+
+        for (final lineId in recipients) {
+          await _push(lineId, message);
+        }
+        sent++;
+      }
+    } catch (e) {
+      debugPrint('Missing expense notification check error: $e');
+    }
+    return sent;
   }
 
   // ─── Helpers ───────────────────────────────────────────

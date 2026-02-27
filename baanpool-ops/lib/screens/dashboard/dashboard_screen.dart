@@ -64,6 +64,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } catch (_) {
         _pmDueSoonCount = 0;
       }
+
+      // Check for completed work orders missing expenses → LINE reminder
+      try {
+        final now = DateTime.now();
+        if (now.hour >= 17) {
+          LineNotifyService().checkAndNotifyMissingExpenses();
+        }
+      } catch (_) {
+        // Ignore errors from expense reminder check
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

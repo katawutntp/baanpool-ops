@@ -301,15 +301,11 @@ BEGIN
     ELSE                    v_status_text := NEW.status;        v_emoji := '📋';
   END CASE;
 
-  -- Build message
+  -- Build message (compact: title, property, status only)
   v_message := v_emoji || ' ใบงานอัปเดตสถานะ' || chr(10)
     || '📝 ' || NEW.title || chr(10)
     || '🏠 บ้าน: ' || COALESCE(v_property.name, '-') || chr(10)
-    || '📊 สถานะ: ' || v_status_text || chr(10)
-    || CASE WHEN v_tech_name IS NOT NULL
-         THEN '👷 ช่าง: ' || v_tech_name || chr(10)
-         ELSE '' END
-    || 'เข้าดูรายละเอียดที่แอป BaanPool Ops';
+    || '📊 สถานะ: ' || v_status_text;
 
   -- Notify caretaker of this property
   IF v_property.caretaker_id IS NOT NULL THEN
