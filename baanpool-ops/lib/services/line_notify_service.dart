@@ -184,6 +184,8 @@ class LineNotifyService {
     required DateTime nextDueDate,
     required int daysUntilDue,
     String? assignedTo,
+    String? pmDescription,
+    String? assetId,
   }) async {
     final isOverdue = daysUntilDue < 0;
     final isDueToday = daysUntilDue == 0;
@@ -200,8 +202,10 @@ class LineNotifyService {
         '📋 $pmTitle\n'
         '🏠 บ้าน: $propertyName\n'
         '🔧 อุปกรณ์: $assetName\n'
+        '${pmDescription != null && pmDescription.isNotEmpty ? "📝 รายละเอียด: $pmDescription\n" : ""}'
         '📅 กำหนด: $dateStr\n'
-        '$statusText';
+        '$statusText\n'
+        '${assetId != null ? "🔗 https://changyai.vercel.app/assets/$assetId" : ""}';
 
     // Collect recipients: technician + caretaker + managers/admins
     final recipients = <String>{};
@@ -359,6 +363,8 @@ class LineNotifyService {
           nextDueDate: nextDue,
           daysUntilDue: daysUntilDue,
           assignedTo: assignedTo,
+          pmDescription: pm['description'] as String?,
+          assetId: assetId,
         );
 
         // Create in-app notifications

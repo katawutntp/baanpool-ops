@@ -19,7 +19,9 @@ CREATE OR REPLACE FUNCTION public.notify_pm_due(
   p_pm_title TEXT,
   p_property_id UUID,
   p_assigned_to UUID,
-  p_next_due_date DATE
+  p_next_due_date DATE,
+  p_description TEXT DEFAULT NULL,
+  p_asset_id UUID DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -67,8 +69,14 @@ BEGIN
   v_message := v_emoji || ' แจ้งเตือน PM' || chr(10)
     || '📋 ' || p_pm_title || chr(10)
     || '🏠 บ้าน: ' || COALESCE(v_property_name, '-') || chr(10)
+    || CASE WHEN p_description IS NOT NULL AND p_description != ''
+         THEN '📝 รายละเอียด: ' || p_description || chr(10)
+         ELSE '' END
     || '📅 กำหนด: ' || to_char(p_next_due_date, 'DD/MM/YYYY') || chr(10)
-    || v_status_text;
+    || v_status_text || chr(10)
+    || CASE WHEN p_asset_id IS NOT NULL
+         THEN '🔗 https://changyai.vercel.app/assets/' || p_asset_id::TEXT
+         ELSE '' END;
 
   -- Build in-app notification body
   v_body := '🏠 บ้าน: ' || COALESCE(v_property_name, '-') || chr(10)
@@ -160,7 +168,7 @@ DECLARE
   v_count INT := 0;
 BEGIN
   FOR v_pm IN
-    SELECT id, title, property_id, assigned_to, next_due_date
+    SELECT id, title, property_id, assigned_to, next_due_date, description, asset_id
     FROM public.pm_schedules
     WHERE is_active = true
       AND next_due_date <= (CURRENT_DATE + INTERVAL '7 days')
@@ -170,7 +178,9 @@ BEGIN
       v_pm.title,
       v_pm.property_id,
       v_pm.assigned_to,
-      v_pm.next_due_date
+      v_pm.next_due_date,
+      v_pm.description,
+      v_pm.asset_id
     );
     v_count := v_count + 1;
   END LOOP;
@@ -193,7 +203,7 @@ BEGIN
   IF TG_OP = 'INSERT' THEN
     IF NEW.is_active AND NEW.next_due_date <= (CURRENT_DATE + INTERVAL '7 days') THEN
       PERFORM public.notify_pm_due(
-        NEW.id, NEW.title, NEW.property_id, NEW.assigned_to, NEW.next_due_date
+        NEW.id, NEW.title, NEW.property_id, NEW.assigned_to, NEW.next_due_date, NEW.description, NEW.asset_id
       );
     END IF;
     RETURN NEW;
@@ -207,7 +217,7 @@ BEGIN
        AND NEW.is_active
        AND NEW.next_due_date <= (CURRENT_DATE + INTERVAL '7 days') THEN
       PERFORM public.notify_pm_due(
-        NEW.id, NEW.title, NEW.property_id, NEW.assigned_to, NEW.next_due_date
+        NEW.id, NEW.title, NEW.property_id, NEW.assigned_to, NEW.next_due_date, NEW.description, NEW.asset_id
       );
     END IF;
     RETURN NEW;

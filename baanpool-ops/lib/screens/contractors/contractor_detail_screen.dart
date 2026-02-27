@@ -260,7 +260,11 @@ class _ContractorDetailScreenState extends State<ContractorDetailScreen> {
                         onTap: () => _callPhone(c.phone!),
                       ),
                     if (c.email != null)
-                      _infoRow(Icons.email, 'อีเมล', c.email!),
+                      _infoRow(
+                        Icons.contact_page,
+                        'ช่องทางติดต่ออื่นๆ',
+                        c.email!,
+                      ),
                     if (c.companyName != null)
                       _infoRow(Icons.business, 'บริษัท', c.companyName!),
                     if (c.notes != null)

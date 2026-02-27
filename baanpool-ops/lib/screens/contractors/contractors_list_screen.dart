@@ -82,10 +82,10 @@ class _ContractorsListScreenState extends State<ContractorsListScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
-                    labelText: 'อีเมล',
-                    prefixIcon: Icon(Icons.email),
+                    labelText: 'ช่องทางติดต่ออื่นๆ',
+                    prefixIcon: Icon(Icons.contact_page),
+                    hintText: 'เช่น LINE ID, Facebook',
                   ),
                 ),
                 const SizedBox(height: 12),

@@ -239,7 +239,7 @@ class _AssetDetailScreenState extends State<AssetDetailScreen> {
   Future<void> _showAddScheduleDialog() async {
     if (_asset == null) return;
 
-    final titleCtrl = TextEditingController();
+    final titleCtrl = TextEditingController(text: _asset!.name);
     final descCtrl = TextEditingController();
     PmFrequency selectedFreq = PmFrequency.monthly;
     DateTime nextDue = DateTime.now().add(const Duration(days: 30));
